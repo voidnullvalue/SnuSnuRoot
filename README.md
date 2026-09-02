@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/snusnuroot-logo.jpg" alt="SnuSnuRoot logo" width="400">
+</p>
+
 # SnuSnuRoot
 
 Self-contained toolkit to root a Fire HD 10 (trona / PS7331.4460N) over adb and
