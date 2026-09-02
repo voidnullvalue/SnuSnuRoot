@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/snusnuroot-logo.jpg" alt="SnuSnuRoot logo" width="400">
+  <img src="assets/snusnuroot-logo.svg" alt="SnuSnuRoot logo" width="400">
 </p>
 
 # SnuSnuRoot

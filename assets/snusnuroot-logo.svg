@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 533" role="img" aria-labelledby="title desc">
+  <title id="title">SnuSnuRoot logo</title>
+  <desc id="desc">A dark lowercase a with a bright orange smile and a large spiky blue mohawk.</desc>
+
+  <!-- Transparent background by design. -->
+
+  <!-- Dark lowercase a -->
+  <text x="400" y="385"
+        text-anchor="middle"
+        font-family="Arial Black, Arial, Helvetica, sans-serif"
+        font-size="330"
+        font-weight="900"
+        fill="#171b22">a</text>
+
+  <!-- Blue mohawk -->
+  <g stroke="#0b0d12" stroke-width="8" stroke-linejoin="round">
+    <path fill="#075bcf" d="M292 247
+      C276 218 280 183 303 143
+      L293 170
+      C294 118 326 72 376 35
+      L354 89
+      C390 48 440 27 505 23
+      C461 48 428 78 407 114
+      C452 78 506 70 565 86
+      C520 100 486 121 463 149
+      C515 123 565 127 613 157
+      C560 155 516 167 481 194
+      C527 180 575 191 617 226
+      C559 210 514 214 480 239
+      C516 237 551 250 580 280
+      C530 256 490 252 456 265
+      L423 315
+      C414 284 401 265 382 254
+      C361 245 331 243 292 247 Z"/>
+
+    <!-- Darker inner streaks -->
+    <path fill="#0a43aa" stroke="none" d="M351 206
+      C347 149 372 94 424 52
+      C395 99 383 153 386 215 Z"/>
+    <path fill="#0a43aa" stroke="none" d="M395 221
+      C424 163 466 126 526 107
+      C476 139 446 180 426 235 Z"/>
+    <path fill="#0a43aa" stroke="none" d="M439 236
+      C487 198 530 188 572 195
+      C520 202 485 220 456 249 Z"/>
+  </g>
+
+  <!-- Orange smile / arrow -->
+  <path d="M222 405
+           C326 481 480 493 601 426"
+        fill="none"
+        stroke="#ff9900"
+        stroke-width="24"
+        stroke-linecap="round"/>
+  <path d="M579 407
+           C610 399 633 403 646 417
+           C637 443 622 463 599 477"
+        fill="none"
+        stroke="#ff9900"
+        stroke-width="24"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>
