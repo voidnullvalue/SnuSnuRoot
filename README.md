@@ -80,6 +80,25 @@ authorization works per-app.
   verifies artifacts against `magisk/.snusnu-revision`; rebuilding requires
   the full `topjohnwu/magisk` checkout and build environment.
 
+## License and Magisk source
+
+SnuSnuRoot is distributed under the **GNU General Public License v3.0**; see
+[`LICENSE`](LICENSE).
+
+This repository also redistributes Magisk APK/native artifacts built from
+`topjohnwu/Magisk`, which is GPL-3.0 licensed. The bundled artifacts correspond
+to the exact upstream revision recorded in `magisk/.snusnu-revision`:
+
+`8c4341e9288360010495a2bc3b46fd2e3f505f9f` — Magisk v31.0 release preparation.
+
+Corresponding source for that revision is available from:
+
+https://github.com/topjohnwu/Magisk/tree/8c4341e9288360010495a2bc3b46fd2e3f505f9f
+
+The Magisk project and its copyrights remain with their respective upstream
+copyright holders. SnuSnuRoot's own modifications, scripts, and integration
+code are likewise distributed under GPL-3.0.
+
 ## Requirements
 
 - Linux host with `adb` (the bundled one is used automatically), `unzip`,
