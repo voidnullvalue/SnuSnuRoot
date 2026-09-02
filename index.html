@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="rooting a fire hd 10 because apparently i have problems">
+  <title>rooting a fire hd 10 because apparently i have problems</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1117;
+      --panel: #161b22;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --border: #30363d;
+      --link: #58a6ff;
+      --code: #e6edf3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 17px/1.72 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    main {
+      width: min(760px, calc(100% - 38px));
+      margin: 0 auto;
+      padding: 64px 0 96px;
+    }
+
+    h1, h2 {
+      color: #f0f6fc;
+      line-height: 1.25;
+      letter-spacing: -0.03em;
+    }
+
+    h1 {
+      margin: 0 0 42px;
+      font-size: clamp(2rem, 6vw, 3.7rem);
+      font-weight: 800;
+    }
+
+    h2 {
+      margin: 60px 0 24px;
+      font-size: 1.5rem;
+    }
+
+    p { margin: 0 0 22px; }
+
+    .pile {
+      margin: 30px 0;
+      padding-left: 22px;
+      border-left: 2px solid var(--border);
+      color: #f0f6fc;
+    }
+
+    .pile p { margin: 0 0 10px; }
+    .pile p:last-child { margin-bottom: 0; }
+
+    pre {
+      overflow-x: auto;
+      margin: 28px 0;
+      padding: 18px 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--code);
+      font: 15px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    code {
+      color: #f0f6fc;
+      font-family: inherit;
+    }
+
+    a { color: var(--link); }
+
+    footer {
+      margin-top: 72px;
+      padding-top: 22px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      main { padding-top: 38px; }
+      body { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>rooting a fire hd 10 because apparently i have problems</h1>
+
+      <p>this started because i wanted to root a fire hd 10 11th gen i got for free</p>
+
+      <p>current fire os. locked bootloader. no flashing old firmware. preferably without opening it.</p>
+
+      <p>i figured old android 9 tablet, old 4.4 kernel, mediatek. how hard can this be.</p>
+
+      <p>i ended up spending days throwing basically every surface i could find at it. mali, ion, cmdq, binder, amazon services, bootloader stuff, weird vendor garbage.</p>
+
+      <p>most of it went nowhere.</p>
+
+      <p>and i used a stupid number of AI tools getting there.</p>
+
+      <p>not because i had some grand "multi agent security research architecture."</p>
+
+      <p>i kept hitting usage limits.</p>
+
+      <p>that is basically the reason. I am cheap. I have a 20/mo chagpt subscription and a 10/month opencode go.</p>
+
+      <p>chatgpt/daybreak would get somewhere useful then i would burn the limit. switch stacks. big pickle and kimi k3 from my opencode go subscrioption. another model. keep going.</p>
+
+      <p>at some point this stopped being a project and became a feverish desire to see uid=0 before the hea</p>
+
+      <p>the research repo gradually turned into a giant pile of:</p>
+
+      <div class="pile">
+        <p>this doesn't work</p>
+        <p>this CVE is patched</p>
+        <p>this looks vulnerable but isn't reachable</p>
+        <p>this DMA engine claims it completed but didn't actually write anything</p>
+        <p>this vendor driver behaves nothing like the public source</p>
+        <p>dont try this again we already wasted 3 hours on it</p>
+      </div>
+
+      <p>which, ironically, made the models way more useful because i could keep handing the next one the pile instead of starting over.</p>
+
+      <p>eventually we found two things that actually mattered.</p>
+
+      <p>first, Fire OS has this root service called <code>time_update</code>.</p>
+
+      <p>it reads <code>persist.sys.saved_time</code>.</p>
+
+      <p>which is supposed to contain a timestamp.</p>
+
+      <p>it also apparently enjoys shell syntax.</p>
+
+      <p>so this:</p>
+
+      <pre><code>x[$(sleep 30;/system/bin/sh /data/securedStorageLocation/t/b)]000</code></pre>
+
+      <p>survives reboot, waits for <code>/data</code>, and eventually runs the script as:</p>
+
+      <pre><code>uid=0(root)
+u:r:time_update:s0</code></pre>
+
+      <p>full linux capabilities too.</p>
+
+      <p>which sounds like game over.</p>
+
+      <p>except SELinux still says no. ofc. stupid SELinux getting in the way all the time</p>
+
+      <p>so we had root and still needed root.</p>
+
+      <p>great.</p>
+
+      <p>the second half came from binder.</p>
+
+      <p>Amazon's kernel still has the bug fixed by CVE-2019-2181. that bug is absolutely not ours.</p>
+
+      <p>but getting it from "old binder CVE exists" to something useful on this exact tablet took a lot more work.</p>
+
+      <p>we ended up with controlled binder corruption, then a kernel address leak, then eventually a very dumb but very useful primitive:</p>
+
+      <p>write eight zero bytes somewhere.</p>
+
+      <p>the somewhere was <code>selinux_enforcing</code>.</p>
+
+      <p>after that:</p>
+
+      <pre><code>getenforce
+Permissive</code></pre>
+
+      <p>now the stupid <code>time_update</code> root process suddenly becomes real useful root.</p>
+
+      <p>from there i got a root service running and then built a live Magisk setup without touching boot or system.</p>
+
+      <p>that became SnuSnuRoot.</p>
+
+      <h2>did we actually find anything new</h2>
+
+      <p>yes.</p>
+
+      <p>one definitely novel bug came out of the Mali work.</p>
+
+      <p><code>HWCNT_READER_SETUP</code> accepts <code>buffer_count=0</code> because of a broken power-of-two check.</p>
+
+      <p>it can leave behind an orphaned client / bad state and appears useful for leaks and DoS.</p>
+
+      <p>it did not get us root.</p>
+
+      <p>the binder vulnerability itself is old. CVE-2019-2181.</p>
+
+      <p>the exploit chain built around it on this Fire tablet appears to be new.</p>
+
+      <p>and i have not found prior work showing the <code>persist.sys.saved_time</code> / <code>time_update</code> trick being used as a persistent arbitrary script carrier to uid 0.</p>
+
+      <p>so that one is at least apparently undocumented.</p>
+
+      <h2>the funniest part</h2>
+
+      <p>near the finish line i hit more usage limits.</p>
+
+      <p>i did not want to wait.</p>
+
+      <p>like at all. Chatgpt said i had to wait till the 5th. burned a week and a reset in a few days lol</p>
+
+      <p>so out of desperation i downloaded Qwen3-Coder-30B-A3B Q5_K_M, ran it locally with llama.cpp, pointed OpenCode at the research tree and kept going.</p>
+
+      <p>on my own hardware.</p>
+
+      <p>that wasn't some ideological "local AI future" thing.</p>
+
+      <p>i was impatient.</p>
+
+      <p>the cloud models were rate limited and i wanted this fucking tablet rooted.</p>
+
+      <p>and it worked well enough to finish.</p>
+
+      <p>that is probably the part of this whole thing that surprised me most.</p>
+
+      <p>not that an AI found a vulnerability.</p>
+
+      <p>it didn't just magically do that.</p>
+
+      <p>but that after enough research had accumulated in files, logs, scripts and dead-end notes, i could swap the brain out for a 30B local model because the important part was becoming the state of the project, not which model remembered the conversation.</p>
+
+      <p>anyway.</p>
+
+      <p>locked fire hd 10.</p>
+
+      <p>current firmware.</p>
+
+      <p>no boot modification.</p>
+
+      <pre><code>uid=0(root)
+getenforce=Permissive
+Magisk=running</code></pre>
+
+      <p>death by snu snu.</p>
+    </article>
+
+    <footer>
+      <a href="https://github.com/voidnullvalue/SnuSnuRoot">source / SnuSnuRoot</a>
+    </footer>
+  </main>
+</body>
+</html>
