@@ -15,17 +15,15 @@ set -eu
 
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-# Prefer the host's adb when available. Fall back to the bundled XBPS build only
-# on systems that do not already provide adb.
-if ! command -v adb >/dev/null 2>&1; then
-    export PATH="$SELF_DIR/tools/xbps-root/usr/bin:$PATH"
-    export LD_LIBRARY_PATH="$SELF_DIR/tools/xbps-root/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-fi
+# Resolve adb once here and export it to every child script.  Host adb wins;
+# the bundled XBPS build is only a last-resort fallback.
+. "$SELF_DIR/scripts/host_adb.sh"
+snusnu_resolve_adb "$SELF_DIR" || exit 1
 
 ACTION="${1:-help}"
 
 require_adb() {
-    adb get-state >/dev/null 2>&1 \
+    "$ADB" get-state >/dev/null 2>&1 \
         || { echo "FATAL: no authorized adb device" >&2; exit 1; }
 }
 
