@@ -14,8 +14,13 @@ set -eu
 # Sequence on a stock device: root -> bootstrap -> manager -> (tap Allow on device).
 
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-export PATH="$SELF_DIR/tools/xbps-root/usr/bin:$PATH"
-export LD_LIBRARY_PATH="$SELF_DIR/tools/xbps-root/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# Prefer the host's adb when available. Fall back to the bundled XBPS build only
+# on systems that do not already provide adb.
+if ! command -v adb >/dev/null 2>&1; then
+    export PATH="$SELF_DIR/tools/xbps-root/usr/bin:$PATH"
+    export LD_LIBRARY_PATH="$SELF_DIR/tools/xbps-root/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
 
 ACTION="${1:-help}"
 
