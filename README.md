@@ -53,7 +53,7 @@ tools/xbps-root/usr/           minimal adb + transitive shared-library closure
 ## Quick start
 
 ```sh
-git clone git@github.com:voidnullvalue/SnuSnuRoot.git
+git clone https://github.com/voidnullvalue/SnuSnuRoot.git
 cd SnuSnuRoot
 ./runme.sh status      # confirm adb device + current state
 ./runme.sh root        # stage waiter, reboot, reroot (uid-0 on 127.0.0.1:4325)
@@ -101,6 +101,6 @@ code are likewise distributed under GPL-3.0.
 
 ## Requirements
 
-- Linux host with `adb` (the bundled one is used automatically), `unzip`,
-  `base64`, `python3`.
+- Linux host with `adb`, `unzip`, `base64`, `python3`. A system `adb` is preferred;
+  the bundled `adb` is used only when no system `adb` is available.
 - Fire HD 10 with USB debugging enabled and an authorized adb host.
