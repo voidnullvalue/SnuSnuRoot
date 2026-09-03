@@ -8,7 +8,33 @@ set -eu
 self_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 self="$self_dir/adb"
 bundled="$self_dir/adb.xbps"
+lib_dir=$(CDPATH= cd -- "$self_dir/../lib" && pwd)
 self_real=$(readlink -f "$self" 2>/dev/null || printf '%s\n' "$self")
+
+exec_host_adb() {
+    host_adb=$1
+    shift
+
+    # Older scripts put the XBPS library directory in LD_LIBRARY_PATH before
+    # invoking this path. Do not leak those libraries into a distro adb.
+    clean_ld=""
+    old_ifs=$IFS
+    IFS=:
+    for entry in ${LD_LIBRARY_PATH:-}; do
+        [ -n "$entry" ] || continue
+        entry_real=$(CDPATH= cd -- "$entry" 2>/dev/null && pwd || printf '%s\n' "$entry")
+        [ "$entry_real" = "$lib_dir" ] && continue
+        clean_ld="${clean_ld:+$clean_ld:}$entry"
+    done
+    IFS=$old_ifs
+
+    if [ -n "$clean_ld" ]; then
+        export LD_LIBRARY_PATH="$clean_ld"
+    else
+        unset LD_LIBRARY_PATH
+    fi
+    exec "$host_adb" "$@"
+}
 
 # Respect an explicitly exported ADB path when it is not this shim.
 if [ -n "${ADB:-}" ]; then
@@ -16,7 +42,7 @@ if [ -n "${ADB:-}" ]; then
         */*)
             adb_real=$(readlink -f "$ADB" 2>/dev/null || printf '%s\n' "$ADB")
             if [ "$adb_real" != "$self_real" ] && [ -x "$ADB" ]; then
-                exec "$ADB" "$@"
+                exec_host_adb "$ADB" "$@"
             fi
             ;;
     esac
@@ -33,7 +59,7 @@ for dir in ${PATH:-}; do
     candidate_real=$(readlink -f "$candidate" 2>/dev/null || printf '%s\n' "$candidate")
     [ "$candidate_real" = "$self_real" ] && continue
     IFS=$old_ifs
-    exec "$candidate" "$@"
+    exec_host_adb "$candidate" "$@"
 done
 IFS=$old_ifs
 
@@ -42,6 +68,5 @@ IFS=$old_ifs
     exit 127
 }
 
-lib_dir="$self_dir/../lib"
 export LD_LIBRARY_PATH="$lib_dir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 exec "$bundled" "$@"
