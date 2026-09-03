@@ -7,8 +7,9 @@ set -eu
 # as Permissive arrives and the loopback root payload has been launched.
 
 repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-adb_bin="$repo_dir/tools/xbps-root/usr/bin/adb"
-adb_lib="$repo_dir/tools/xbps-root/usr/lib"
+. "$repo_dir/scripts/host_adb.sh"
+snusnu_resolve_adb "$repo_dir" || exit 1
+
 payload_host="${1:?payload path required}"
 waiter_dir=/data/securedStorageLocation/w
 waiter_file="$waiter_dir/b"
@@ -16,7 +17,7 @@ payload_device=/data/local/tmp/__reroot_payload.sh
 old_time_file=/data/local/tmp/__reroot_old_time
 trigger='x[$(sleep 30;/system/bin/sh /data/securedStorageLocation/w/b)]000'
 
-adb() { LD_LIBRARY_PATH="$adb_lib" "$adb_bin" "$@"; }
+adb() { "$ADB" "$@"; }
 die() { echo "FATAL: $*" >&2; exit 1; }
 
 [ -f "$payload_host" ] || die "payload file not found: $payload_host"
