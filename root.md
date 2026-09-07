@@ -83,7 +83,7 @@ and a later user-initiated reboot can try again.
 
 ---
 
-## 2. Assets on device (pre-staged)
+## 2. Initial-root assets on device
 
 ```
 /data/securedStorageLocation/codex.amazon.jni.v51/
@@ -101,9 +101,10 @@ and a later user-initiated reboot can try again.
     magisk/
 ```
 
-Staged by `scripts/stage_amazon_app_jni*.sh` (uses the uid-10024
-`com.amazon.device.software.ota` channel + `amazonfiled` service to create the
-dir from `/sdcard/Download`). Verify presence before the carrier phase.
+`scripts/stage_initial_root_assets.sh` installs these from the checked-in
+prebuilt artifacts through the UID-1000 channel. `runme.sh root` invokes it
+automatically before the first reboot; repeated runs verify hashes and make no
+changes when the files are already current.
 
 ## 3. Scripts (entry points)
 
@@ -111,13 +112,12 @@ dir from `/sdcard/Download`). Verify presence before the carrier phase.
 | --- | --- |
 | `runme.sh` | Top-level `arm`, `status`, `verify`, and `disarm`, plus host fallbacks. |
 | `scripts/root_poc.sh` | Full PoC driver — staging-if-needed → reboot → root chain, plus cleanup subcommand. |
+| `scripts/stage_initial_root_assets.sh` | Idempotently installs and verifies the agent/JNI/hwbinder files required by phase B. |
 | `scripts/stage_reroot_waiter.sh <payload>` | Phase A: consumes the boot's one-shot to install `w/b` and arm `persist.sys.saved_time`. Ends with "waiter armed; reboot". |
 | `scripts/reroot_after_boot.sh <payload>` | Phase B: runs P2 (leak → write → Permissive) and confirms P3 handoff + root service on 4325. |
-| `scripts/reroot_lottery.sh <payload> [max]` | Wrapper: retries phase B across reboot-cycles (needed because of per-boot one-shot quirks). |
 | `scripts/snusnu_waiter.sh` | Device-side UID-0 waiter and root/Magisk restoration. |
 | `poc/snusnu-persist-app/` | API-28 direct-boot APK, native hwbinder payload, build and self-check. |
 | `scripts/snusnu_magisk_device_restore.sh` | Device-side live-Magisk reconstruction (`start`/`status`/`stop`, `__SNU_MAGISK_OK__` marker), staged at `/data/securedStorageLocation/snusnu/magisk_restore.sh`. |
-| `poc/snusnu-preload/preload_client` | Static-ARM64 abstract-LocalSocket preload client (replaces host Python + `adb forward`). |
 | `scripts/webview_zygote_preload_client.py` | Sends the 5-field WebView-zygote preload command. |
 | `scripts/zygote_payload_system_app.sh` | uid-1000 one-shot payload used by staging. |
 
@@ -132,7 +132,7 @@ native results and recovery state are exposed by `runme.sh status`.
 ## 4. Usage
 
 ```bash
-cd fire-hd-research
+cd SnuSnuRoot
 ./runme.sh doctor           # checks host and all shipped runtime artifacts
 adb devices                 # expect one authorized device
 

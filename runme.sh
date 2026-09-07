@@ -113,6 +113,10 @@ doctor() {
     (cd "$repo_dir/prebuilt" && sha256sum -c SHA256SUMS)
     [ -x "$repo_dir/prebuilt/device/arm64-v8a/snusnu_hwbinder_root" ] \
         || die "missing hwbinder carrier"
+    for initial_asset in agent.jar libcodex_jni.so libhwbinder_target.so; do
+        [ -s "$repo_dir/prebuilt/device/arm64-v8a/$initial_asset" ] \
+            || die "missing initial-root artifact: $initial_asset"
+    done
     if grep -R -E 'svc power reboot|PowerManager.*reboot' \
             "$repo_dir/poc/snusnu-persist-app/src" >/dev/null 2>&1; then
         die "unsafe automatic reboot path found in persistence actor"
@@ -185,7 +189,8 @@ emit_file() {
     target="$1"
     source="$2"
     printf ': > %s.b64\n' "$target"
-    base64 "$source" | tr -d '\n' | fold -w 512 | while IFS= read -r chunk; do
+    base64 "$source" | tr -d '\n' | fold -w 512 \
+        | while IFS= read -r chunk || [ -n "$chunk" ]; do
         printf "printf '%%s' '%s' >> %s.b64\n" "$chunk" "$target"
     done
     printf 'toybox base64 -d %s.b64 > %s && chmod 0755 %s && rm -f %s.b64\n' \

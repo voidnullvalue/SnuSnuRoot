@@ -98,6 +98,12 @@ root_flow() {
   payload="$([ "${1:-}" ] && echo "$1" || echo "$payload_default")"
   [ -f "$payload" ] || die "payload file not found: $payload"
 
+  # A previously prepared development tablet already has these files, but a
+  # fresh device does not. Stage the exact tested agent/JNI/target artifacts
+  # before the first reboot so phase B never relies on hidden device state.
+  "$repo_dir/scripts/stage_initial_root_assets.sh" install \
+    || die "initial-root asset staging failed"
+
   if [ "$(armed_status)" != ARMED ]; then
     echo "** PHASE A: staging waiter (consumes this boot's one-shot) **"
     "$repo_dir/scripts/stage_reroot_waiter.sh" "$payload" \
