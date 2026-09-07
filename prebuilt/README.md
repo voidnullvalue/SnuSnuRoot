@@ -10,6 +10,7 @@ Android SDK, JDK, NDK, compiler, or a Magisk source checkout.
 - `device/arm64-v8a/agent.jar`: WebView-zygote initial-root agent.
 - `device/arm64-v8a/libcodex_jni.so`: JNI bridge loaded by the agent.
 - `device/arm64-v8a/libhwbinder_target.so`: tested initial-root hwbinder target.
+- `device/arm64-v8a/stub.apk`: matching Magisk trusted-certificate stub.
 - `SHA256SUMS`: integrity manifest checked by `./runme.sh doctor`.
 
 Maintainers can rebuild the APK with

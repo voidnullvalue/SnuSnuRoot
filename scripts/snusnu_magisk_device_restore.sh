@@ -347,8 +347,12 @@ start() {
         pfs_rc=$?
         log "post-fs-data rc=$pfs_rc"
         if [ -e /sbin/stub.apk ]; then
-            log "WARNING: stub.apk was not consumed; trusted Manager certificate not bound"
+            fail "stub.apk was not consumed; trusted Manager certificate not bound"
         else
+            toybox sha256sum "$STAGE/stub.apk" | awk '{print $1}' \
+                > /data/adb/magisk/.snusnu-trusted-stub.sha256 \
+                || fail "cannot record trusted stub digest"
+            chmod 0600 /data/adb/magisk/.snusnu-trusted-stub.sha256
             log "stub.apk consumed: trusted Manager certificate bound"
         fi
         /sbin/magisk --sqlite "INSERT OR REPLACE INTO settings (key,value) VALUES('bootloop',0)" >/dev/null 2>&1 || true

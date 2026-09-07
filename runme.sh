@@ -10,7 +10,7 @@
 #   manager     host-driven fallback: run scripts/snusnu_magisk_manager.sh setup
 #   request     trigger an adb-shell MagiskSU authorization request
 #   disarm      disable the autonomous chain and restore the original numeric
-#               persist.sys.saved_time (host + device; 4321 uid-1000 channel)
+#               persist.sys.saved_time through the existing UID-0 channel.
 #   status      report device health: arm/app state, SELinux,
 #               uid-0 listener, Magisk runtime/daemon/Manager, last boot result
 #   verify      require the complete post-reboot state or exit nonzero
@@ -113,7 +113,7 @@ doctor() {
     (cd "$repo_dir/prebuilt" && sha256sum -c SHA256SUMS)
     [ -x "$repo_dir/prebuilt/device/arm64-v8a/snusnu_hwbinder_root" ] \
         || die "missing hwbinder carrier"
-    for initial_asset in agent.jar libcodex_jni.so libhwbinder_target.so; do
+    for initial_asset in agent.jar libcodex_jni.so libhwbinder_target.so stub.apk; do
         [ -s "$repo_dir/prebuilt/device/arm64-v8a/$initial_asset" ] \
             || die "missing initial-root artifact: $initial_asset"
     done
@@ -139,8 +139,7 @@ wait_boot() {
 # Nothing here can write into /data/securedStorageLocation from adb shell
 # (uid 2000): the secured dir is owned by system with assetstorage_data_file
 # context. So we host-push binaries into /data/local/tmp (shell-writable) and
-# then copy them into place through the uid-1000 system_app channel, matching
-# how stage_reroot_waiter.sh / send_amazon_app_jni_over_listener.sh work.
+# then copy them into place through the existing UID-0 listener.
 SNS_STAGE=/data/local/tmp/snusnu-stage
 
 stage_to_local_tmp() {
@@ -156,22 +155,13 @@ stage_to_local_tmp() {
     adb push "$magisk" "$SNS_STAGE/magisk/magisk" >/dev/null
     adb push "$policy" "$SNS_STAGE/magisk/magiskpolicy" >/dev/null
 
-    if [ -s "$repo_dir/magisk/out/app-release.apk" ]; then
-        if command -v unzip >/dev/null 2>&1; then
-            unzip -p "$repo_dir/magisk/out/app-release.apk" assets/stub.apk >"$repo_dir/.stub.apk" 2>/dev/null \
-                && [ -s "$repo_dir/.stub.apk" ] \
-                && adb push "$repo_dir/.stub.apk" "$SNS_STAGE/magisk/stub.apk" >/dev/null
-            rm -f "$repo_dir/.stub.apk"
-        fi
-    fi
-    echo "staged -> $SNS_STAGE (copied into place via uid-1000 channel below)"
+    adb push "$repo_dir/prebuilt/device/arm64-v8a/stub.apk" \
+        "$SNS_STAGE/magisk/stub.apk" >/dev/null
+    echo "staged -> $SNS_STAGE (copied into place via UID-0 below)"
 }
 
-# Copy the staged tmp files into the persistent secured dir through the
-# uid-1000 system_app shell, and snapshot the numeric restore value for disarm.
-# cp from /data/local/tmp (shell_data_file) is denied to system_app, so stage
-# MISSING files only, via base64-over-tcp (same pattern as
-# send_amazon_app_jni_over_listener.sh). Returns the shell command string to emit.
+# Prepare the persistent secured directory through UID 0 and snapshot the
+# numeric restore value for disarm. Returns the shell command string to emit.
 #   $1 = old_time (numeric)
 #   $2 = file:local_pair space-separated triplets "devpath localpath" for partial stages
 channel_copy_command() {
@@ -181,32 +171,6 @@ channel_copy_command() {
       "printf '%s' '$1' > /data/local/tmp/__reroot_old_time 2>/dev/null; " \
       "ls -ldZ $SNS;
 "
-}
-
-# Base64-pipe a local file into the device through the uid-1000 listener.
-# Avoids the shell_data_file read denial that breaks `cp` for system_app.
-emit_file() {
-    target="$1"
-    source="$2"
-    printf ': > %s.b64\n' "$target"
-    base64 "$source" | tr -d '\n' | fold -w 512 \
-        | while IFS= read -r chunk || [ -n "$chunk" ]; do
-        printf "printf '%%s' '%s' >> %s.b64\n" "$chunk" "$target"
-    done
-    printf 'toybox base64 -d %s.b64 > %s && chmod 0755 %s && rm -f %s.b64\n' \
-        "$target" "$target" "$target" "$target"
-}
-
-send_file_via_channel() {
-    target="$1"
-    source="$2"
-    expected="$(sha256sum "$source" | awk '{print $1}')"
-    output="$({ emit_file "$target" "$source"; printf 'toybox sha256sum %s\nexit\n' "$target"; } |
-        adb_with_timeout 180 shell 'toybox nc -w 150 127.0.0.1 4321' 2>&1 | tr -d '\r')"
-    case "$output" in
-        *"$expected"*) : ;;
-        *) die "UID-1000 transfer verification failed for $target: $output" ;;
-    esac
 }
 
 install_system_carrier() {
@@ -258,26 +222,40 @@ install_boot_entry() {
 # Stage any missing pieces (content-parity check against host md5); never cp.
 # Small chain files are always re-emitted (cheap, keeps them current); the large
 # magisk/magiskpolicy/stub are only staged when absent (several MB over TCP).
-stage_missing_via_channel() {
-    printf 'mkdir -p %s/magisk\nexit\n' "$SNS" |
-        adb shell 'toybox nc -w 10 127.0.0.1 4321' >/dev/null
-    send_file_via_channel "$SNS/waiter.sh" "$repo_dir/scripts/snusnu_waiter.sh"
-    send_file_via_channel "$SNS/magisk_restore.sh" "$repo_dir/scripts/snusnu_magisk_device_restore.sh"
-    send_file_via_channel "$SNS/hwbinder_root" "$repo_dir/prebuilt/device/arm64-v8a/snusnu_hwbinder_root"
-    odd="$(printf "ls -l '$SNS/magisk/magisk' '$SNS/magisk/magiskpolicy' >/dev/null 2>&1 && echo ready || echo partial\nexit\n" |
-        adb shell 'toybox nc -w 10 127.0.0.1 4321' 2>&1 | tr -d '\r')"
-    if [ "$odd" != ready ]; then
-        send_file_via_channel "$SNS/magisk/magisk" "$repo_dir/prebuilt/device/arm64-v8a/magisk"
-        send_file_via_channel "$SNS/magisk/magiskpolicy" "$repo_dir/prebuilt/device/arm64-v8a/magiskpolicy"
-    fi
-    [ -s "$repo_dir/.stub.apk" ] && send_file_via_channel "$SNS/magisk/stub.apk" "$repo_dir/.stub.apk"
+install_staged_via_root() {
+    staged="$1"
+    target="$2"
+    source="$3"
+    mode="$4"
+    expected="$(sha256sum "$source" | awk '{print $1}')"
+    output="$(printf 'cp %s %s.new && chmod %s %s.new && test "$(toybox sha256sum %s.new | cut -d" " -f1)" = %s && mv -f %s.new %s\ntoybox sha256sum %s\nexit\n' \
+        "$staged" "$target" "$mode" "$target" "$target" "$expected" \
+        "$target" "$target" "$target" |
+        adb_with_timeout 30 shell 'toybox nc -w 20 127.0.0.1 4325' 2>&1 | tr -d '\r')"
+    case "$output" in *"$expected"*) : ;; *) die "UID-0 staged copy failed for $target: $output" ;; esac
 }
 
-## ---- arm via the proven uid-1000 injection channel -------------------------
-# Mirrors scripts/stage_reroot_waiter.sh byte-for-byte in mechanism: spawn the
-# uid-1000 system_app shell on 4321 with zygote_payload_system_app.sh, then
-# base64-gate the waiter and the (dollar-sign-bearing) trigger through that
-# session so the literal strings are written without shell re-expansion.
+stage_missing_via_root() {
+    stage_to_local_tmp
+    printf 'mkdir -p %s/magisk %s/state; chmod 0755 %s %s/magisk; chmod 0777 %s/state\nexit\n' \
+        "$SNS" "$SNS" "$SNS" "$SNS" "$SNS" |
+        adb shell 'toybox nc -w 10 127.0.0.1 4325' >/dev/null
+    install_staged_via_root "$SNS_STAGE/waiter.sh" "$SNS/waiter.sh" \
+        "$repo_dir/scripts/snusnu_waiter.sh" 0755
+    install_staged_via_root "$SNS_STAGE/magisk_restore.sh" "$SNS/magisk_restore.sh" \
+        "$repo_dir/scripts/snusnu_magisk_device_restore.sh" 0755
+    install_staged_via_root "$SNS_STAGE/hwbinder_root" "$SNS/hwbinder_root" \
+        "$repo_dir/prebuilt/device/arm64-v8a/snusnu_hwbinder_root" 0755
+    install_staged_via_root "$SNS_STAGE/magisk/magisk" "$SNS/magisk/magisk" \
+        "$repo_dir/prebuilt/device/arm64-v8a/magisk" 0755
+    install_staged_via_root "$SNS_STAGE/magisk/magiskpolicy" "$SNS/magisk/magiskpolicy" \
+        "$repo_dir/prebuilt/device/arm64-v8a/magiskpolicy" 0755
+    install_staged_via_root "$SNS_STAGE/magisk/stub.apk" "$SNS/magisk/stub.apk" \
+        "$repo_dir/prebuilt/device/arm64-v8a/stub.apk" 0644
+    adb shell "rm -rf '$SNS_STAGE'" >/dev/null
+}
+
+## ---- arm through the proven UID-0 listener ---------------------------------
 arm() {
     require_device
     wait_boot
@@ -336,11 +314,8 @@ arm() {
         # time_update domain performs the actual execution on boot.
         ready="$(adb shell "ls -l '$SNS/waiter.sh' '$SNS/hwbinder_root' '$WATER_FILE' >/dev/null 2>&1 && echo ready || echo partial" | tr -d '\r')"
         if [ "$ready" != ready ]; then
-            identity="$(printf 'id\nexit\n' | adb shell 'toybox nc -w 3 127.0.0.1 4321' 2>/dev/null | tr -d '\r')"
-            case "$identity" in
-                *uid=1000*context=u:r:system_app:s0*) stage_missing_via_channel ;;
-                *) die "trigger is armed but helpers are incomplete and no UID-1000 repair channel is available; disarm, reboot, then reinstall" ;;
-            esac
+            identity="$(printf 'id\nexit\n' | adb shell 'toybox nc -w 3 127.0.0.1 4325' 2>/dev/null | tr -d '\r')"
+            case "$identity" in *uid=0*) stage_missing_via_root ;; *) die "trigger is armed but helpers are incomplete and UID-0 repair is unavailable" ;; esac
             ready="$(adb shell "ls -l '$SNS/waiter.sh' '$SNS/hwbinder_root' '$WATER_FILE' >/dev/null 2>&1 && echo ready || echo partial" | tr -d '\r')"
             [ "$ready" = ready ] || die "helper repair did not commit all required files"
         fi
@@ -358,39 +333,20 @@ arm() {
         ''|*[!0-9]*) die "saved_time is not a clean numeric value: $old_time" ;;
     esac
 
-    stage_to_local_tmp
-
-    # Bring up the uid-1000 system_app shell on 4321 (same as
-    # stage_reroot_waiter.sh); everything below is transacted through it.
-    # The spawned nc child inherits the adb session fd, so the spawn call can
-    # hang until the child exits: pre-check for an existing listener and cap
-    # the spawn call itself.
-    identity="$(printf 'id\nexit\n' | adb shell 'toybox nc -w 3 127.0.0.1 4321' 2>/dev/null | tr -d '\r')"
-    case "$identity" in
-        *uid=1000*context=u:r:system_app:s0*) : ;;
-        *)
-            adb_with_timeout 30 shell < "$repo_dir/scripts/zygote_payload_system_app.sh" >/dev/null || true
-            sleep 3
-            identity="$(printf 'id\nexit\n' | adb shell 'toybox nc -w 3 127.0.0.1 4321' 2>/dev/null | tr -d '\r')"
-            ;;
-    esac
-    case "$identity" in
-        *uid=1000*context=u:r:system_app:s0*) : ;;
-        *) die "uid-1000 staging listener failed: $identity" ;;
-    esac
-
-    # Push chain files through the uid-1000 channel (base64-over-tcp, not cp).
-    stage_missing_via_channel
+    # Initial root already provides the time_update UID-0 channel. Use it for
+    # persistence files so installation never depends on a second zygote
+    # exploit slot in the same boot.
+    stage_missing_via_root
 
     trigger_b64="$(printf '%s' "$TRIGGER" | base64 | tr -d '\n')"
 
     stage_command="$(channel_copy_command "$old_time")setprop persist.sys.saved_time \"\$(printf '%s' '$trigger_b64' | toybox base64 -d)\"; log -t REROOTWAIT \"armed=\$(getprop persist.sys.saved_time)\";"
 
     { printf '%s\n' "$stage_command"; printf 'exit\n'; } |
-        adb shell 'toybox nc -w 30 127.0.0.1 4321' >/dev/null
+        adb shell 'toybox nc -w 30 127.0.0.1 4325' >/dev/null
 
     printf 'printf "0\\n" > %s/state/retry_count; chmod 0666 %s/state/retry_count; sync\nexit\n' "$SNS" "$SNS" |
-        adb shell 'toybox nc -w 10 127.0.0.1 4321' >/dev/null
+        adb shell 'toybox nc -w 10 127.0.0.1 4325' >/dev/null
 
     sleep 3
     exempt="$(adb shell 'settings get global hidden_api_blacklist_exemptions' | tr -d '\r')"

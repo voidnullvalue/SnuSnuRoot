@@ -117,9 +117,25 @@ root_flow() {
     echo "waiter already ARMED; skipping staging"
   fi
 
-  echo "** PHASE B: root chain (carrier leak+write -> Permissive -> uid-0 waiter handoff) **"
-  "$repo_dir/scripts/reroot_after_boot.sh" "$payload" \
-    || die "phase B failed. If leak=0x40... (EALREADY): reboot and re-run."
+  max_attempts="${SNUSNU_ROOT_ATTEMPTS:-6}"
+  case "$max_attempts" in
+    ''|*[!0-9]*|0) die "SNUSNU_ROOT_ATTEMPTS must be a positive integer" ;;
+  esac
+  attempt=1
+  while :; do
+    echo "** PHASE B: root chain attempt $attempt/$max_attempts (carrier leak+write -> Permissive -> uid-0 waiter handoff) **"
+    if "$repo_dir/scripts/reroot_after_boot.sh" "$payload"; then
+      break
+    fi
+    [ "$attempt" -lt "$max_attempts" ] \
+      || die "phase B failed after $max_attempts clean-boot attempts"
+    attempt=$((attempt + 1))
+    echo "phase B boot state spent; host-requested reboot before attempt $attempt"
+    adb reboot >/dev/null 2>&1 || true
+    sleep 10
+    adb wait-for-device || true
+    check_device
+  done
 
   echo
   echo "persistence_state=$(armed_status)"

@@ -537,8 +537,12 @@ start() {
         log "post-fs-data rc=$pfs_rc"
 
         if [ -e /sbin/stub.apk ]; then
-            log "WARNING: stub.apk was not consumed; trusted Manager certificate is NOT bound"
+            fail "stub.apk was not consumed; trusted Manager certificate is NOT bound"
         else
+            toybox sha256sum "$STAGE/stub.apk" | awk '{print $1}' \
+                > /data/adb/magisk/.snusnu-trusted-stub.sha256 \
+                || fail "cannot record trusted stub digest"
+            chmod 0600 /data/adb/magisk/.snusnu-trusted-stub.sha256
             log "stub.apk consumed: trusted Manager certificate bound"
         fi
 

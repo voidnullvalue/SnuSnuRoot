@@ -240,10 +240,10 @@ stage_support() {
     pair=$(extract_support_files)
     stub=${pair%%|*}
     busybox=${pair#*|}
+    stub_digest=$(sha256sum "$stub" | awk '{print $1}')
 
-    log "staging matching stub.apk and BusyBox"
+    log "verifying bootstrap trust binding and staging matching BusyBox"
     "$ADB" shell "rm -rf '$DEVICE_STAGE'; mkdir -p '$DEVICE_STAGE'" >/dev/null
-    "$ADB" push "$stub" "$DEVICE_STAGE/stub.apk" >/dev/null
     "$ADB" push "$busybox" "$DEVICE_STAGE/busybox" >/dev/null
 
     # Also retain matching copies of core binaries in /data/adb/magisk.
@@ -261,34 +261,12 @@ stage_support() {
         cp /sbin/magiskpolicy /data/adb/magisk/magiskpolicy
         chmod 0755 /data/adb/magisk/magisk /data/adb/magisk/magiskpolicy
 
-        cp '$DEVICE_STAGE/stub.apk' /sbin/stub.apk
-        chmod 0644 /sbin/stub.apk
-
+        test \"\$(cat /data/adb/magisk/.snusnu-trusted-stub.sha256 2>/dev/null)\" = '$stub_digest' \
+            || { echo 'trusted_stub_marker=mismatch_or_missing'; exit 42; }
+        echo 'trusted_stub_marker=$stub_digest'
         echo 'support_stage=ok'
-        ls -l /sbin/stub.apk /data/adb/magisk/busybox
+        ls -l /data/adb/magisk/busybox
     " | grep -q 'support_stage=ok' || die "failed to stage Magisk support files"
-}
-
-run_post_fs_data() {
-    log "running Magisk post-fs-data stage"
-    out=$(root_cmd '
-        echo "before_path=$(/sbin/magisk --path 2>&1)"
-        /sbin/magisk --post-fs-data
-        rc=$?
-        echo "post_fs_data_rc=$rc"
-        test -e /sbin/stub.apk && echo "stub_after=present" || echo "stub_after=consumed"
-        test -x /data/adb/magisk/busybox && echo "busybox=persistent" || echo "busybox=missing"
-        test -x /sbin/.magisk/busybox/busybox && echo "busybox_runtime=yes" || echo "busybox_runtime=no"
-        exit $rc
-    ') || die "magisk --post-fs-data transport/command failed"
-
-    printf '%s\n' "$out"
-    printf '%s\n' "$out" | grep -q '^post_fs_data_rc=0$' \
-        || die "Magisk post-fs-data returned non-zero"
-    printf '%s\n' "$out" | grep -q '^stub_after=consumed$' \
-        || die "stub.apk was not consumed by preserve_stub_apk; trusted Manager certificate is not proven"
-    printf '%s\n' "$out" | grep -q '^busybox=persistent$' \
-        || die "Magisk persistent BusyBox missing after post-fs-data"
 }
 
 install_manager() {
@@ -412,10 +390,6 @@ setup() {
     log "Manager APK package: $pkg"
 
     stage_support
-    require_root_listener
-
-    run_post_fs_data
-    require_adb
     require_root_listener
 
     install_manager "$pkg"
