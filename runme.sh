@@ -228,8 +228,8 @@ install_staged_via_root() {
     source="$3"
     mode="$4"
     expected="$(sha256sum "$source" | awk '{print $1}')"
-    output="$(printf 'cp %s %s.new && chmod %s %s.new && test "$(toybox sha256sum %s.new | cut -d" " -f1)" = %s && mv -f %s.new %s\ntoybox sha256sum %s\nexit\n' \
-        "$staged" "$target" "$mode" "$target" "$target" "$expected" \
+    output="$(printf 'cp %s %s.new && chown 1000:1000 %s.new && chmod %s %s.new && test "$(toybox sha256sum %s.new | cut -d" " -f1)" = %s && mv -f %s.new %s\ntoybox sha256sum %s\nexit\n' \
+        "$staged" "$target" "$target" "$mode" "$target" "$target" "$expected" \
         "$target" "$target" "$target" |
         adb_with_timeout 30 shell 'toybox nc -w 20 127.0.0.1 4325' 2>&1 | tr -d '\r')"
     case "$output" in *"$expected"*) : ;; *) die "UID-0 staged copy failed for $target: $output" ;; esac
@@ -237,8 +237,8 @@ install_staged_via_root() {
 
 stage_missing_via_root() {
     stage_to_local_tmp
-    printf 'mkdir -p %s/magisk %s/state; chmod 0755 %s %s/magisk; chmod 0777 %s/state\nexit\n' \
-        "$SNS" "$SNS" "$SNS" "$SNS" "$SNS" |
+    printf 'mkdir -p %s/magisk %s/state; chown 1000:1000 %s %s/magisk %s/state; chmod 0755 %s %s/magisk; chmod 0777 %s/state\nexit\n' \
+        "$SNS" "$SNS" "$SNS" "$SNS" "$SNS" "$SNS" "$SNS" "$SNS" |
         adb shell 'toybox nc -w 10 127.0.0.1 4325' >/dev/null
     install_staged_via_root "$SNS_STAGE/waiter.sh" "$SNS/waiter.sh" \
         "$repo_dir/scripts/snusnu_waiter.sh" 0755
