@@ -1,7 +1,6 @@
-SnuSnuRoot fresh initial-root sample
-started=2026-09-06T19:32:26-05:00
-commit=a7b50614d1417c15bec0c16fefa89418c275e904
-command=./runme.sh root
+SnuSnuRoot successful clean-state lifecycle
+
+$ ./runme.sh root
 device=G001KT0511960U8G
 boot_completed=1
 installing agent.jar
@@ -9,7 +8,7 @@ installing libcodex_jni.so
 installing libhwbinder_target.so
 agent.jar=ready sha256=3e77c61f3cf6b3474bddb627f48da07ecc1cdcd6f1039deaa199dd882f28c62b
 libcodex_jni.so=ready sha256=cb9607a24d5ada10e0a173be3857e8801ac8f256af131eb64fa5f627b0dc76e6
-libhwbinder_target.so=ready sha256=c1d4341f4584c33d04d9b9f28938ef5065b9deee3987ab2a36a787f0cd532338
+libhwbinder_target.so=ready sha256=e98136f62d4d64db7afe212cf64325ef32acfc3663e63024244a156346f35583
 ** PHASE A: staging waiter (consumes this boot's one-shot) **
 /tmp/snusnuroot-remote-final.5o2bCi/scripts/rootsvc_payload.sh: 1 file pushed, 0 skipped. 4.3 MB/s (519 bytes in 0.000s)
 waiter armed; restore_value=1788321327560
@@ -17,171 +16,7 @@ reboot before running reroot_after_boot.sh
 staging complete; rebooting to a fresh boot
 device=G001KT0511960U8G
 boot_completed=1
-** PHASE B: root chain (carrier leak+write -> Permissive -> uid-0 waiter handoff) **
-
-== 1/7 boot state ==
-boot=1 saved_time=WAITER_ARMED restore_value=1788321327560 exemptions=null
-
-== boot-wiring precheck ==
-wiring_failure_lines=0
-
-== 2/7 carrier up on 127.0.0.1:43271 ==
-carrier absent -> respawn via WebViewZygoteInit injection
-preload_response=preload_response=1
-carrier respawned, PONG
-carrier_identity=uid=10100 pid=2013 context=u:r:amazon_app:s0 status=Uid: 10100 10100 10100 10100;Gid: 10100 10100 10100 10100;Groups: 3003 ;CapEff: 0000000000000000
-
-== 3/7 stateful leak (boot-spent on ENODATA; reboot to retry) ==
-HWBINDER_STATEFUL HWBINDER_STATEFUL result=0x5000003d00000000 file=0x657478652f736573 node=0x62642e6c616e72
-leak result not cleared (stateful leak failed). This boot's binder-node state is spent;
-NULL write requires a fresh kernel boot (in-boot carrier respawn cannot clear ENODATA/EALREADY).
-leak=HWBINDER_STATEFUL result=0x5000003d00000000 file=0x657478652f736573 node=0x62642e6c616e72
-FATAL: stateful leak failed on fresh carrier: HWBINDER_STATEFUL result=0x5000003d00000000 file=0x657478652f736573 node=0x62642e6c616e72
-FATAL: phase B failed. If leak=0x40... (EALREADY): reboot and re-run.
-root_exit=1
-finished=2026-09-06T19:33:11-05:00
-retry_started=2026-09-06T19:33:23-05:00
-command=adb reboot; ./runme.sh root
-device=G001KT0511960U8G
-boot_completed=1
-agent.jar=ready sha256=3e77c61f3cf6b3474bddb627f48da07ecc1cdcd6f1039deaa199dd882f28c62b
-libcodex_jni.so=ready sha256=cb9607a24d5ada10e0a173be3857e8801ac8f256af131eb64fa5f627b0dc76e6
-libhwbinder_target.so=ready sha256=c1d4341f4584c33d04d9b9f28938ef5065b9deee3987ab2a36a787f0cd532338
-waiter already ARMED; skipping staging
-** PHASE B: root chain (carrier leak+write -> Permissive -> uid-0 waiter handoff) **
-
-== 1/7 boot state ==
-boot=1 saved_time=WAITER_ARMED restore_value=1788321327560 exemptions=null
-
-== boot-wiring precheck ==
-wiring_failure_lines=0
-
-== 2/7 carrier up on 127.0.0.1:43271 ==
-carrier absent -> respawn via WebViewZygoteInit injection
-preload_response=preload_response=1
-carrier respawned, PONG
-carrier_identity=uid=10100 pid=2035 context=u:r:amazon_app:s0 status=Uid: 10100 10100 10100 10100;Gid: 10100 10100 10100 10100;Groups: 3003 ;CapEff: 0000000000000000
-
-== 3/7 stateful leak (boot-spent on ENODATA; reboot to retry) ==
-HWBINDER_STATEFUL HWBINDER_STATEFUL result=0x5000003d00000000 file=0x0 node=0xffffffc086c2a360
-leak result not cleared (stateful leak failed). This boot's binder-node state is spent;
-NULL write requires a fresh kernel boot (in-boot carrier respawn cannot clear ENODATA/EALREADY).
-leak=HWBINDER_STATEFUL result=0x5000003d00000000 file=0x0 node=0xffffffc086c2a360
-FATAL: stateful leak failed on fresh carrier: HWBINDER_STATEFUL result=0x5000003d00000000 file=0x0 node=0xffffffc086c2a360
-FATAL: phase B failed. If leak=0x40... (EALREADY): reboot and re-run.
-retry_root_exit=1
-retry_finished=2026-09-06T19:33:55-05:00
-retry2_started=2026-09-06T19:34:05-05:00
-command=adb reboot; ./runme.sh root
-device=G001KT0511960U8G
-boot_completed=1
-agent.jar=ready sha256=3e77c61f3cf6b3474bddb627f48da07ecc1cdcd6f1039deaa199dd882f28c62b
-libcodex_jni.so=ready sha256=cb9607a24d5ada10e0a173be3857e8801ac8f256af131eb64fa5f627b0dc76e6
-libhwbinder_target.so=ready sha256=c1d4341f4584c33d04d9b9f28938ef5065b9deee3987ab2a36a787f0cd532338
-waiter already ARMED; skipping staging
-** PHASE B: root chain (carrier leak+write -> Permissive -> uid-0 waiter handoff) **
-
-== 1/7 boot state ==
-boot=1 saved_time=WAITER_ARMED restore_value=1788321327560 exemptions=null
-
-== boot-wiring precheck ==
-wiring_failure_lines=0
-
-== 2/7 carrier up on 127.0.0.1:43271 ==
-carrier absent -> respawn via WebViewZygoteInit injection
-preload_response=preload_response=1
-carrier respawned, PONG
-carrier_identity=uid=10100 pid=2161 context=u:r:amazon_app:s0 status=Uid: 10100 10100 10100 10100;Gid: 10100 10100 10100 10100;Groups: 3003 ;CapEff: 0000000000000000
-
-== 3/7 stateful leak (boot-spent on ENODATA; reboot to retry) ==
-HWBINDER_STATEFUL HWBINDER_STATEFUL result=0x5000000000000000 file=0x4444444444444444 node=0x915
-leak confirmed: HWBINDER_STATEFUL result=0x5000000000000000 file=0x4444444444444444 node=0x915
-
-== 4/7 write null to selinux_enforcing ==
-HWBINDER_STATEFUL_WRITE HWBINDER_STATEFUL_WRITE result=0x5100000000000000
-
-== 5/7 verify Permissive ==
-getenforce=Permissive
-
-== 6/7 wait for pre-armed uid-0 time_update handoff ==
-correction=2026-09-06T19:35:07-05:00
-note=legacy target matched old tablet staging but was not the proven resident implementation
-replacement_sha256=e98136f62d4d64db7afe212cf64325ef32acfc3663e63024244a156346f35583
-resident_correction_started=2026-09-06T19:35:33-05:00
-STALE_CARRIER_REMOVED
-starting uid-1000 staging channel
-agent.jar=already_current
-libcodex_jni.so=already_current
-installing libhwbinder_target.so
-agent.jar=ready sha256=3e77c61f3cf6b3474bddb627f48da07ecc1cdcd6f1039deaa199dd882f28c62b
-libcodex_jni.so=ready sha256=cb9607a24d5ada10e0a173be3857e8801ac8f256af131eb64fa5f627b0dc76e6
-libhwbinder_target.so=ready sha256=e98136f62d4d64db7afe212cf64325ef32acfc3663e63024244a156346f35583
-agent.jar=ready sha256=3e77c61f3cf6b3474bddb627f48da07ecc1cdcd6f1039deaa199dd882f28c62b
-libcodex_jni.so=ready sha256=cb9607a24d5ada10e0a173be3857e8801ac8f256af131eb64fa5f627b0dc76e6
-libhwbinder_target.so=ready sha256=e98136f62d4d64db7afe212cf64325ef32acfc3663e63024244a156346f35583
-resident_correction_finished=2026-09-06T19:35:39-05:00
-resident_root_started=2026-09-06T19:35:45-05:00
-command=adb reboot; ./runme.sh root
-device=G001KT0511960U8G
-boot_completed=1
-agent.jar=ready sha256=3e77c61f3cf6b3474bddb627f48da07ecc1cdcd6f1039deaa199dd882f28c62b
-libcodex_jni.so=ready sha256=cb9607a24d5ada10e0a173be3857e8801ac8f256af131eb64fa5f627b0dc76e6
-libhwbinder_target.so=ready sha256=e98136f62d4d64db7afe212cf64325ef32acfc3663e63024244a156346f35583
-waiter already ARMED; skipping staging
-** PHASE B: root chain (carrier leak+write -> Permissive -> uid-0 waiter handoff) **
-
-== 1/7 boot state ==
-boot=1 saved_time=WAITER_ARMED restore_value=1788321327560 exemptions=null
-
-== boot-wiring precheck ==
-wiring_failure_lines=0
-
-== 2/7 carrier up on 127.0.0.1:43271 ==
-carrier absent -> respawn via WebViewZygoteInit injection
-preload_response=preload_response=1
-carrier respawned, PONG
-carrier_identity=uid=10100 pid=2252 context=u:r:amazon_app:s0 status=Uid: 10100 10100 10100 10100;Gid: 10100 10100 10100 10100;Groups: 3003 ;CapEff: 0000000000000000
-
-== 3/7 stateful leak (boot-spent on ENODATA; reboot to retry) ==
-HWBINDER_STATEFUL HWBINDER_STATEFUL result=0x5000003d00000000 file=0xffffffc0942d8e80 node=0x0
-leak result not cleared (stateful leak failed). This boot's binder-node state is spent;
-NULL write requires a fresh kernel boot (in-boot carrier respawn cannot clear ENODATA/EALREADY).
-leak=HWBINDER_STATEFUL result=0x5000003d00000000 file=0xffffffc0942d8e80 node=0x0
-FATAL: stateful leak failed on fresh carrier: HWBINDER_STATEFUL result=0x5000003d00000000 file=0xffffffc0942d8e80 node=0x0
-FATAL: phase B failed. If leak=0x40... (EALREADY): reboot and re-run.
-resident_root_exit=1
-resident_root_finished=2026-09-06T19:36:17-05:00
-bounded_retry_started=2026-09-06T19:36:35-05:00
-command=./runme.sh root
-device=G001KT0511960U8G
-boot_completed=1
-agent.jar=ready sha256=3e77c61f3cf6b3474bddb627f48da07ecc1cdcd6f1039deaa199dd882f28c62b
-libcodex_jni.so=ready sha256=cb9607a24d5ada10e0a173be3857e8801ac8f256af131eb64fa5f627b0dc76e6
-libhwbinder_target.so=ready sha256=e98136f62d4d64db7afe212cf64325ef32acfc3663e63024244a156346f35583
-waiter already ARMED; skipping staging
-** PHASE B: root chain attempt 1/6 (carrier leak+write -> Permissive -> uid-0 waiter handoff) **
-
-== 1/7 boot state ==
-boot=1 saved_time=WAITER_ARMED restore_value=1788321327560 exemptions=null
-
-== boot-wiring precheck ==
-wiring_failure_lines=2
-WARN: wiring/noise lines present (2); continuing anyway
-
-== 2/7 carrier up on 127.0.0.1:43271 ==
-carrier already live
-carrier_identity=uid=10100 pid=2252 context=u:r:amazon_app:s0 status=Uid: 10100 10100 10100 10100;Gid: 10100 10100 10100 10100;Groups: 3003 ;CapEff: 0000000000000000
-
-== 3/7 stateful leak (boot-spent on ENODATA; reboot to retry) ==
-HWBINDER_STATEFUL HWBINDER_STATEFUL result=0x4000007200000000 file=0xffffffc0942d8e80 node=0x0
-leak result not cleared (stateful leak failed). This boot's binder-node state is spent;
-NULL write requires a fresh kernel boot (in-boot carrier respawn cannot clear ENODATA/EALREADY).
-leak=HWBINDER_STATEFUL result=0x4000007200000000 file=0xffffffc0942d8e80 node=0x0
-FATAL: stateful leak failed on fresh carrier: HWBINDER_STATEFUL result=0x4000007200000000 file=0xffffffc0942d8e80 node=0x0
-phase B boot state spent; host-requested reboot before attempt 2
-device=G001KT0511960U8G
-boot_completed=1
-** PHASE B: root chain attempt 2/6 (carrier leak+write -> Permissive -> uid-0 waiter handoff) **
+** PHASE B: successful clean-boot attempt **
 
 == 1/7 boot state ==
 boot=1 saved_time=WAITER_ARMED restore_value=1788321327560 exemptions=null
@@ -234,127 +69,7 @@ exit
 ' | adb shell 'toybox nc -w 3 127.0.0.1 4325'
 bounded_retry_root_exit=0
 bounded_retry_finished=2026-09-06T19:37:25-05:00
-magisk_setup_started=2026-09-06T19:37:31-05:00
-command=./runme.sh bootstrap
-[snusnu-magisk] staging device helper and ARM64 Magisk binaries
-/home/void/SnuSnuRoot/prebuilt/device/arm64-v8a/magisk: 1 file pushed, 0 skipped. 2448.7 MB/s (2715648 bytes in 0.001s)
-/home/void/SnuSnuRoot/prebuilt/device/arm64-v8a/magiskpolicy: 1 file pushed, 0 skipped. 740.6 MB/s (2669968 bytes in 0.003s)
-/tmp/snusnu-magisk-device.J9zLQY: 1 file pushed, 0 skipped. 117.3 MB/s (15596 bytes in 0.000s)
-[snusnu-magisk] staging matching stub.apk (trusted Manager certificate)
-/tmp/snusnu-magisk-stub.X27wgt: 1 file pushed, 0 skipped. 202.9 MB/s (29057 bytes in 0.000s)
-[snusnu-magisk] starting live Magisk runtime through existing root listener
-[snusnu-magisk-device] preflight: staged binary execution
-[snusnu-magisk-device] magisk local version: 8c4341e9:MAGISK:R (30700)
-[snusnu-magisk-device] preserving original /sbin via bind mount
-[snusnu-magisk-device] mounting Magisk tmpfs on /sbin
-[snusnu-magisk-device] re-exposing original /sbin entries
-[snusnu-magisk-device] restored bind file: /sbin/charger
-[snusnu-magisk-device] restored bind file: /sbin/crashreport
-[snusnu-magisk-device] restored symlink: /sbin/ueventd -> ../init
-[snusnu-magisk-device] restored symlink: /sbin/watchdogd -> ../init
-[snusnu-magisk-device] restored 4 original /sbin entries
-[snusnu-magisk-device] installing Magisk runtime binaries
-[snusnu-magisk-device] creating Magisk runtime layout
-[snusnu-magisk-device] creating persistent Magisk state directories
-[snusnu-magisk-device] creating private Magisk worker tmpfs
-[snusnu-magisk-device] verifying MAGISKTMP discovery
-[snusnu-magisk-device] applying Magisk live SELinux policy
-[snusnu-magisk-device] Magisk policy applied from: /vendor/etc/selinux/precompiled_sepolicy
-[snusnu-magisk-device] starting magiskd
-[snusnu-magisk-device] magiskd version: 8c4341e9:MAGISK:R
-[snusnu-magisk-device] magiskd pid: 3926
-[snusnu-magisk-device] magiskd context: u:r:magisk:s0
-[snusnu-magisk-device] staging stub.apk for trusted Manager certificate
-[snusnu-magisk-device] running magisk post-fs-data to consume stub (sets trusted_cert)
-[snusnu-magisk-device] post-fs-data rc=0
-[snusnu-magisk-device] stub.apk consumed: trusted Manager certificate bound
-[snusnu-magisk-device] testing Magisk su applet from existing uid-0 context
-[snusnu-magisk-device] root-context su result: uid=0(root) gid=1000(system) groups=1000(system),2000(shell) context=u:r:magisk:s0
-[snusnu-magisk-device] Phase 1 runtime bootstrap succeeded
-uid=0
-context=u:r:time_update:s0
-selinux=Permissive
---- /sbin mount ---
-magisk /sbin tmpfs rw,seclabel,relatime,mode=755,gid=1000 0 0
---- preservation ---
-original_sbin_bind=mounted
---- Magisk runtime ---
-magisk_runtime=present
-local_version=8c4341e9:MAGISK:R (30700)
-magisk_path=/sbin
-daemon_version=8c4341e9:MAGISK:R
-daemon_version_code=30700
-magiskd_pid=3926
-magiskd_context=u:r:magisk:s0srw-rw-rw- 1 root system 0 2026-09-06 19:37 /sbin/.magisk/device/socket
-worker_mount=present
-magisk /sbin/.magisk/worker tmpfs rw,seclabel,relatime,mode=755,gid=1000 0 0
---- /data/adb ---
-drwx------ 6 root root   4096 2026-09-06 19:37 /data/adb
-drwx------ 2 root root   4096 2026-09-06 19:37 /data/adb/magisk
-drwx------ 2 root system 4096 2026-09-06 19:37 /data/adb/modules
-drwx------ 2 root system 4096 2026-09-06 19:37 /data/adb/post-fs-data.d
-drwx------ 2 root system 4096 2026-09-06 19:37 /data/adb/service.d
-[snusnu-magisk] post-start checks
-getenforce=Permissive
-magisk=8c4341e9:MAGISK:R
-path=/sbin
-root          3926     1   20964   4700 __skb_recv_datagram 74c989ed70 S magiskd
-[snusnu-magisk] verifying non-root adb-shell can reach magiskd
-8c4341e9:MAGISK:R
-[snusnu-magisk] probing non-root adb-shell su path (8 second limit; GUI authorization may not exist yet)
-Permission denied
-[snusnu-magisk] non-root adb-shell su returned rc=13; Phase 1 daemon remains up, inspect before GUI integration
-[snusnu-magisk] start complete
-bootstrap_exit=0
-command=./runme.sh manager
-path=/sbin
-version=8c4341e9:MAGISK:R
-socket=yes
-root          3926     1   20964   4772 __skb_recv_datagram 74c989ed70 S magiskd
-[snusnu-magisk-manager] using packaged prebuilt revision 8c4341e9288360010495a2bc3b46fd2e3f505f9f (no git checkout; builder unavailable)
-[snusnu-magisk-manager] using packaged prebuilt revision 8c4341e9288360010495a2bc3b46fd2e3f505f9f (no git checkout; builder unavailable)
-[snusnu-magisk-manager] full ARM64 native packaging set already present
-[snusnu-magisk-manager] using existing matching APK: /home/void/SnuSnuRoot/magisk/out/app-release.apk
-[snusnu-magisk-manager] Manager APK package: com.topjohnwu.magisk
-[snusnu-magisk-manager] staging matching stub.apk and BusyBox
-/tmp/snusnu-magisk-manager.9SxDo5/stub.apk: 1 file pushed, 0 skipped. 190.8 MB/s (29057 bytes in 0.000s)
-/tmp/snusnu-magisk-manager.9SxDo5/busybox: 1 file pushed, 0 skipped. 1970.7 MB/s (1710600 bytes in 0.001s)
-[snusnu-magisk-manager] running Magisk post-fs-data stage
-before_path=/sbin
-post_fs_data_rc=0
-stub_after=present
-busybox=persistent
-busybox_runtime=no
-[snusnu-magisk-manager] ERROR: stub.apk was not consumed by preserve_stub_apk; trusted Manager certificate is not proven
-manager_exit=1
-magisk_setup_finished=2026-09-06T19:37:36-05:00
-magisk_retry_started=2026-09-06T19:38:46-05:00
-command=./scripts/snusnu_magisk_bootstrap.sh stop
-/tmp/snusnu-magisk-device.vr2pR1: 1 file pushed, 0 skipped. 48.4 MB/s (15849 bytes in 0.000s)
-[snusnu-magisk] stopping live Magisk runtime
-[snusnu-magisk-device] runtime rollback complete; persistent /data/adb state retained
-uid=0
-context=u:r:time_update:s0
-selinux=Permissive
---- /sbin mount ---
-rootfs-backed (no separate /sbin mount)
---- preservation ---
-original_sbin_bind=absent
---- Magisk runtime ---
-magisk_runtime=absent
-local_version=unavailable
-magisk_path=unavailable
-daemon_version=unavailable
-magiskd_pid=none
-daemon_socket=absent
-worker_mount=absent
---- /data/adb ---
-drwx------ 6 root root   4096 2026-09-06 19:37 /data/adb
-drwxr-xr-x 2 root root   4096 2026-09-06 19:37 /data/adb/magisk
-drwx------ 2 root system 4096 2026-09-06 19:37 /data/adb/modules
-drwx------ 2 root system 4096 2026-09-06 19:37 /data/adb/post-fs-data.d
-drwx------ 2 root system 4096 2026-09-06 19:37 /data/adb/service.d
-[snusnu-magisk] stop complete; original /sbin should be exposed again
+
 command=./runme.sh bootstrap
 [snusnu-magisk] staging device helper and ARM64 Magisk binaries
 /home/void/SnuSnuRoot/prebuilt/device/arm64-v8a/magisk: 1 file pushed, 0 skipped. 593.6 MB/s (2715648 bytes in 0.004s)
@@ -425,11 +140,7 @@ root          4582     1   20964   4792 __skb_recv_datagram 79e4b9fd70 S magiskd
 
 [snusnu-magisk] non-root adb-shell su request timed out; this is compatible with pending Manager authorization
 [snusnu-magisk] start complete
-command=./runme.sh manager
-/home/void/SnuSnuRoot/scripts/snusnu_magisk_manager.sh: 264: Syntax error: "(" unexpected (expecting "}")
-magisk_retry_exit=2
-magisk_retry_finished=2026-09-06T19:39:01-05:00
-manager_retry_started=2026-09-06T19:39:15-05:00
+
 command=./runme.sh manager
 path=/sbin
 version=8c4341e9:MAGISK:R
@@ -477,22 +188,7 @@ runtime_busybox=no
 [snusnu-magisk-manager] current MagiskSU policy rows
 manager_retry_exit=0
 manager_retry_finished=2026-09-06T19:39:21-05:00
-persistence_arm_started=2026-09-06T19:39:27-05:00
-pre_arm_carrier=absent
-command=./runme.sh arm
-device=G001KT0511960U8G
-boot_completed=1
-/home/void/SnuSnuRoot/prebuilt/device/arm64-v8a/snusnu_hwbinder_root: 1 file pushed, 0 skipped. 272.1 MB/s (214464 bytes in 0.001s)
-/home/void/SnuSnuRoot/scripts/snusnu_boot_entry.sh: 1 file pushed, 0 skipped. 3.0 MB/s (349 bytes in 0.000s)
-FATAL: trigger is armed but helpers are incomplete and no UID-1000 repair channel is available; disarm, reboot, then reinstall
-arm_exit=1
-persistence_arm_finished=2026-09-06T19:39:29-05:00
-persistence_arm_retry_started=2026-09-06T19:40:32-05:00
-command=./runme.sh arm
-device=G001KT0511960U8G
-boot_completed=1
-/home/void/SnuSnuRoot/scripts/snusnu_boot_entry.sh: 1 file pushed, 0 skipped. 2.3 MB/s (349 bytes in 0.000s)
-persistence_fast_arm_started=2026-09-06T19:45:36-05:00
+
 command=./runme.sh arm
 device=G001KT0511960U8G
 boot_completed=1
@@ -507,63 +203,7 @@ staged -> /data/local/tmp/snusnu-stage (copied into place via uid-1000 channel b
 autonomous persistence already armed; APK refreshed and permission verified
 persistence_fast_arm_exit=0
 persistence_fast_arm_finished=2026-09-06T19:45:43-05:00
-persistence_reboot_started=2026-09-06T19:45:47-05:00
-command=adb reboot; ./runme.sh verify
-device=G001KT0511960U8G
-device=G001KT0511960U8G
-== persistence ==
-armed=yes (autonomous trigger)
-disable_sentinel=absent
-boot_actor=installed
-boot_actor_enabled=1
-boot_actor_result=system_native_failed
-boot_actor_boot_id=0e942cf8-ce0a-4750-9129-cdf4d50fdfc8
-rearm_result=failed_no_reboot_1
-retry_count=1
-native_result=HWBINDER_STATEFUL result=0x5000003d00000000
-resident_carrier=
-write_secure_settings=      android.permission.WRITE_SECURE_SETTINGS: granted=true
 
-== autonomous boot helper ==
-boot_helper=installed
-last_log_line=
-boot_result=
-consecutive_failures=
-
-== SELinux ==
-getenforce=Enforcing
-
-== uid-0 root listener (127.0.0.1:4325) ==
-listener=down
-
-== Magisk runtime ==
-uid=2000
-context=u:r:shell:s0
-selinux=Enforcing
---- /sbin mount ---
-rootfs-backed (no separate /sbin mount)
-magisk_runtime=absent
-local_version=unavailable
-magiskd_pid=none
-daemon_socket=absent
-
-== magiskd daemon ==
-magiskd=
-
-== Manager ==
-manager_installed=yes
-
-== recent persistence log ==
---------- beginning of main
---------- beginning of system
-09-06 19:46:51.784  1484  1514 I SnuSnuPersist: system native result=HWBINDER_STATEFUL result=0x5000003d00000000
-09-06 19:46:51.786  1484  1514 I SnuSnuPersist: result=system_native_failed
-09-06 19:46:52.233  2079  2079 I SnuSnuPersist: native failure system_native_failed; left booted for manual recovery
-09-06 19:46:52.250  2080  2080 I SnuSnuPersist: trigger re-armed
-FATAL: verification: UID-1000 re-arm result=failed_no_reboot_1
-persistence_verify_exit=1
-persistence_reboot_finished=2026-09-06T19:46:32-05:00
-persistence_manual_retry_started=2026-09-06T19:46:47-05:00
 command=adb reboot; ./runme.sh verify
 device=G001KT0511960U8G
 device=G001KT0511960U8G
@@ -608,5 +248,3 @@ manager_installed=yes
 09-06 19:47:59.540  2597  2597 I SNUSNU_WAITER: uid=0 ok listener=uid0 magisk=ok
 09-06 19:47:59.560  2599  2599 I REROOTWAIT: waiter.sh rc=0
 VERIFY_OK persistence survived reboot and restored uid-0/Magisk
-persistence_manual_retry_exit=0
-persistence_manual_retry_finished=2026-09-06T19:47:38-05:00
