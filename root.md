@@ -98,6 +98,20 @@ If either class is `UNKNOWN`, check access to `/proc/self/exe` or restage the
 assets. A class mismatch names both classes and exits before issuing
 `HWBINDER_STATEFUL`.
 
+The carrier `ID` response is machine-readable (`IDV2` plus tab-separated
+`key=value` fields). Host parsing validates UID, PID, SELinux context, each
+supplementary group as an exact number, ELF class, ABI, and JNI path
+independently. The host also accepts the earlier human-readable response so
+already-staged carriers can be diagnosed without a false group failure.
+
+Phase B failures carry a class-specific exit status. Validation and other
+pre-exploit failures stop without claiming the boot's Binder primitive was
+spent. Only a failed stateful leak permits an automatic fresh-boot retry. On
+trona, `time_update` may consume and normalize the armed property to a numeric
+timestamp during that boot; retry handling therefore uses a dedicated staging
+boot to re-arm it before rebooting again for Phase B. Numeric or invalid waiter
+state at the start of Phase B now aborts immediately.
+
 ### P3. time_update property-trigger waiter (boot-time uid-0 handoff)
 `persist.sys.saved_time` is read by Amazon's `time_update` service at boot;
 the value is parseable as `time -s <value>` syntax (command-injection via
