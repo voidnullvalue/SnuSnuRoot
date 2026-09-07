@@ -31,7 +31,7 @@
 set -eu
 
 repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-bundled_adb="$repo_dir/tools/xbps-root/usr/bin/adb"
+bundled_adb="$repo_dir/tools/xbps-root/usr/bin/adb.xbps"
 bundled_loader="$repo_dir/tools/xbps-root/usr/lib/ld-linux-x86-64.so.2"
 bundled_lib="$repo_dir/tools/xbps-root/usr/lib"
 

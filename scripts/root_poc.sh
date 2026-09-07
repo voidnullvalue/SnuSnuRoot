@@ -15,8 +15,8 @@ set -eu
 #   scripts/root_poc.sh disarm             revert persistence (numeric restore)
 #   scripts/root_poc.sh status             report current device state
 #
-# Requirements: adb stack under tools/xbps-root (see notes/uid1000-method.md),
-# device authorized in `adb devices`.
+# Requirements: an authorized adb device. Host adb is preferred; the bundled
+# XBPS build is used only when no host adb is available.
 
 repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 adb_bin="${ADB:-$repo_dir/tools/adb-portable.sh}"

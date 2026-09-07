@@ -27,7 +27,7 @@ set -eu
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_DIR=$(CDPATH= cd -- "$SELF_DIR/.." && pwd)
 
-ADB=${ADB:-"$REPO_DIR/tools/xbps-root/usr/bin/adb"}
+ADB=${ADB:-"$REPO_DIR/tools/adb-portable.sh"}
 MAGISK_DIR="$REPO_DIR/magisk"
 EXPECTED_REV="8c4341e9288360010495a2bc3b46fd2e3f505f9f"
 

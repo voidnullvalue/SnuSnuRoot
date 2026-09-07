@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/snusnuroot-logo.svg" alt="SnuSnuRoot logo" width="400">
+</p>
+
 # SnuSnuRoot
 
 Self-contained toolkit to root a Fire HD 10 (trona / PS7331.4460N) over adb and
@@ -60,7 +64,7 @@ tools/xbps-root/usr/           minimal adb + transitive shared-library closure
 ## Quick start
 
 ```sh
-git clone git@github.com:voidnullvalue/SnuSnuRoot.git
+git clone https://github.com/voidnullvalue/SnuSnuRoot.git
 cd SnuSnuRoot
 ./runme.sh status      # confirm adb device + current state
 ./runme.sh root        # stage waiter, reboot, reroot (uid-0 on 127.0.0.1:4325)
@@ -92,6 +96,25 @@ authorization works per-app.
 - Prebuilt only: no Magisk source is shipped. `snusnu_magisk_manager.sh`
   verifies artifacts against `magisk/.snusnu-revision`; rebuilding requires
   the full `topjohnwu/magisk` checkout and build environment.
+
+## License and Magisk source
+
+SnuSnuRoot is distributed under the **GNU General Public License v3.0**; see
+[`LICENSE`](LICENSE).
+
+This repository also redistributes Magisk APK/native artifacts built from
+`topjohnwu/Magisk`, which is GPL-3.0 licensed. The bundled artifacts correspond
+to the exact upstream revision recorded in `magisk/.snusnu-revision`:
+
+`8c4341e9288360010495a2bc3b46fd2e3f505f9f` — Magisk v31.0 release preparation.
+
+Corresponding source for that revision is available from:
+
+https://github.com/topjohnwu/Magisk/tree/8c4341e9288360010495a2bc3b46fd2e3f505f9f
+
+The Magisk project and its copyrights remain with their respective upstream
+copyright holders. SnuSnuRoot's own modifications, scripts, and integration
+code are likewise distributed under GPL-3.0.
 
 ## Requirements
 
