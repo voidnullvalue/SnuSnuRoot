@@ -19,8 +19,7 @@ set -eu
 # device authorized in `adb devices`.
 
 repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-export PATH="$repo_dir/tools/xbps-root/usr/bin:$PATH"
-export LD_LIBRARY_PATH="$repo_dir/tools/xbps-root/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+adb_bin="${ADB:-$repo_dir/tools/adb-portable.sh}"
 
 payload_default="$repo_dir/scripts/rootsvc_payload.sh"
 waiter_trigger='x[$(sleep 30;/system/bin/sh /data/securedStorageLocation/w/b)]000'
@@ -43,7 +42,7 @@ PAYLOAD_EOF
   chmod 0755 "$payload_default"
 }
 
-adb() { timeout 30 "$repo_dir/tools/xbps-root/usr/bin/adb" "$@"; }
+adb() { timeout 30 "$adb_bin" "$@"; }
 die() { echo "FATAL: $*" >&2; exit 1; }
 
 check_device() {

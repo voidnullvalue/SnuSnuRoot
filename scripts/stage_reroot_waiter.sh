@@ -7,8 +7,7 @@ set -eu
 # as Permissive arrives and the loopback root payload has been launched.
 
 repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-adb_bin="$repo_dir/tools/xbps-root/usr/bin/adb"
-adb_lib="$repo_dir/tools/xbps-root/usr/lib"
+adb_bin="${ADB:-$repo_dir/tools/adb-portable.sh}"
 payload_host="${1:?payload path required}"
 waiter_dir=/data/securedStorageLocation/w
 waiter_file="$waiter_dir/b"
@@ -16,7 +15,7 @@ payload_device=/data/local/tmp/__reroot_payload.sh
 old_time_file=/data/local/tmp/__reroot_old_time
 trigger='x[$(sleep 30;/system/bin/sh /data/securedStorageLocation/w/b)]000'
 
-adb() { LD_LIBRARY_PATH="$adb_lib" "$adb_bin" "$@"; }
+adb() { "$adb_bin" "$@"; }
 die() { echo "FATAL: $*" >&2; exit 1; }
 
 [ -f "$payload_host" ] || die "payload file not found: $payload_host"
@@ -41,8 +40,8 @@ bootstrap="$(printf '%s\n' \
   'sleep 3' \
   "setprop persist.sys.saved_time $old_time" \
   'log -t REROOTWAIT "restored=$(getprop persist.sys.saved_time)"')"
-bootstrap_b64="$(printf '%s\n' "$bootstrap" | base64 -w0)"
-trigger_b64="$(printf '%s' "$trigger" | base64 -w0)"
+bootstrap_b64="$(printf '%s\n' "$bootstrap" | base64 | tr -d '\n')"
+trigger_b64="$(printf '%s' "$trigger" | base64 | tr -d '\n')"
 
 stage_command="mkdir -p $waiter_dir; chmod 0755 $waiter_dir; printf '%s' '$bootstrap_b64' | toybox base64 -d > $waiter_file; chmod 0644 $waiter_file; setprop persist.sys.saved_time \"\$(printf '%s' '$trigger_b64' | toybox base64 -d)\"; log -t REROOTWAIT \"armed=\$(getprop persist.sys.saved_time)\";"
 adb shell < "$repo_dir/scripts/zygote_payload_system_app.sh" >/dev/null

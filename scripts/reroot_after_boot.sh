@@ -18,8 +18,7 @@ set -eu
 # nothing on the write side (Permissive is the intended goal for the boot).
 
 repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-adb_bin="$repo_dir/tools/xbps-root/usr/bin/adb"
-adb_lib="$repo_dir/tools/xbps-root/usr/lib"
+adb_bin="${ADB:-$repo_dir/tools/adb-portable.sh}"
 asset_dir=/data/securedStorageLocation/codex.amazon.jni.v51
 probe_port=43271
 forward_port=43212
@@ -30,7 +29,7 @@ waiter_dir=/data/securedStorageLocation/w
 waiter_trigger='x[$(sleep 30;/system/bin/sh /data/securedStorageLocation/w/b)]000'
 old_time_file=/data/local/tmp/__reroot_old_time
 
-adb() { LD_LIBRARY_PATH="$adb_lib" "$adb_bin" "$@"; }
+adb() { "$adb_bin" "$@"; }
 
 die() { echo "FATAL: $*" >&2; exit 1; }
 stage_hdr() { echo; echo "== $1 =="; }

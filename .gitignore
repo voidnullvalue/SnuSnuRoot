@@ -1,2 +1,4 @@
 .snusnu-magisk-manager-package
 *.log
+poc/snusnu-persist-app/build/
+poc/snusnu-persist-app/build.work.*/

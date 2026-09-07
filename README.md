@@ -26,10 +26,19 @@ Everything runs from the host over adb. Two stages, both reversible in one boot:
      installs the Manager APK, runs `--service` / `--boot-complete`, and
      launches the app.
 
+3. **Reboot persistence** (`runme.sh arm`)
+   - Installs a direct-boot actor that regains the UID-1000 system-app channel,
+     runs the hwbinder primitive from a resident carrier, and restores UID 0,
+     Permissive SELinux, and Magisk after every normal reboot.
+   - Does not modify boot, recovery, system, vendor, RPMB, or verified-boot
+     state. Native misses fail open without requesting another reboot.
+
 ## Layout
 
 ```
 runme.sh                  single entry point
+prebuilt/                 signed boot actor, Magisk runtime, resident carrier
+poc/snusnu-persist-app/   direct-boot actor source and maintainer build script
 scripts/
   root_poc.sh             full root driver (root|status|disarm)
   stage_reroot_waiter.sh  arm the boot waiter (pre-reboot)
@@ -39,6 +48,8 @@ scripts/
   webview_zygote_preload_client.py
   snusnu_magisk_bootstrap.sh   Phase 1 /sbin runtime
   snusnu_magisk_manager.sh     Phase 2 Manager integration
+  snusnu_boot_entry.sh         UID-0 boot entry
+  snusnu_waiter.sh             root/Magisk restoration waiter
 magisk/
   out/app-release.apk          Manager APK (com.topjohnwu.magisk, 30700)
   native/out/arm64-v8a/        magisk, magiskpolicy, magiskboot, magiskinit, libinit-ld.so
@@ -57,6 +68,12 @@ cd SnuSnuRoot
 ./runme.sh manager     # install + launch Magisk Manager
 ./runme.sh request     # trigger an adb-shell su request; tap Allow on the tablet
 ./runme.sh status      # verify: Manager installed, daemon version, policies
+
+# Install and verify automatic reboot persistence after root is active:
+./runme.sh doctor
+./runme.sh arm
+adb reboot
+./runme.sh verify
 ```
 
 Once the Manager is up it reports Magisk installed/up-to-date (the Home card's
@@ -78,6 +95,8 @@ authorization works per-app.
 
 ## Requirements
 
-- Linux host with `adb` (the bundled one is used automatically), `unzip`,
-  `base64`, `python3`.
+- Linux host. Persistence use needs no SDK, JDK, NDK, compiler, or Magisk
+  source checkout. On x86_64, the bundled ADB runtime works on glibc and musl;
+  other host architectures must provide `ADB=/path/to/adb`.
+- The initial host-driven root fallback additionally uses `python3`.
 - Fire HD 10 with USB debugging enabled and an authorized adb host.

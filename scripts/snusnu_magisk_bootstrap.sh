@@ -20,9 +20,9 @@ set -eu
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_DIR=$(CDPATH= cd -- "$SELF_DIR/.." && pwd)
 
-ADB=${ADB:-"$REPO_DIR/tools/xbps-root/usr/bin/adb"}
-MAGISK_HOST="$REPO_DIR/magisk/native/out/arm64-v8a/magisk"
-POLICY_HOST="$REPO_DIR/magisk/native/out/arm64-v8a/magiskpolicy"
+ADB=${ADB:-"$REPO_DIR/tools/adb-portable.sh"}
+MAGISK_HOST="$REPO_DIR/prebuilt/device/arm64-v8a/magisk"
+POLICY_HOST="$REPO_DIR/prebuilt/device/arm64-v8a/magiskpolicy"
 
 DEVICE_HELPER="/data/local/tmp/snusnu_magisk_device.sh"
 DEVICE_STAGE="/data/local/tmp/snusnu-magisk-stage"
