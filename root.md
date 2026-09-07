@@ -112,6 +112,12 @@ timestamp during that boot; retry handling therefore uses a dedicated staging
 boot to re-arm it before rebooting again for Phase B. Numeric or invalid waiter
 state at the start of Phase B now aborts immediately.
 
+Phase A also reuses an already-validated UID-1000 staging listener. Injecting
+a second listener after asset installation can leave a delayed one-shot
+request that wins the next boot's race and prevents the `amazon_app` carrier
+from starting. Asset replacement is followed by `sync`, so an unexpected
+reboot cannot leave a zero-length or partially installed carrier payload.
+
 ### P3. time_update property-trigger waiter (boot-time uid-0 handoff)
 `persist.sys.saved_time` is read by Amazon's `time_update` service at boot;
 the value is parseable as `time -s <value>` syntax (command-injection via
@@ -244,6 +250,9 @@ printf 'id\nexit\n' | adb shell 'toybox nc -w 3 127.0.0.1 4325'
    reboot` is ignored (device can wedge at high load; power-hold works).
 4. **`time_update` cannot re-arm itself.** The v2 app spends P1 on a UID-1000
    child and re-arms through that child before attempting the kernel write.
+   Disable the installed v2 boot actor before manually validating
+   `root_poc.sh`; otherwise its expected `snusnu-persist-system` child consumes
+   P1 before the manual `amazon_app` carrier can start.
 5. **Payload lifecycle**: everything is on `/data`; the durable pieces are the
    installed boot actor, `/data/snusnu_hwbinder_root`,
    `/data/securedStorageLocation/w/b`, and `snusnu/`.

@@ -44,12 +44,20 @@ bootstrap_b64="$(printf '%s\n' "$bootstrap" | base64 | tr -d '\n')"
 trigger_b64="$(printf '%s' "$trigger" | base64 | tr -d '\n')"
 
 stage_command="mkdir -p $waiter_dir; chmod 0755 $waiter_dir; printf '%s' '$bootstrap_b64' | toybox base64 -d > $waiter_file; chmod 0644 $waiter_file; setprop persist.sys.saved_time \"\$(printf '%s' '$trigger_b64' | toybox base64 -d)\"; log -t REROOTWAIT \"armed=\$(getprop persist.sys.saved_time)\";"
-adb shell < "$repo_dir/scripts/zygote_payload_system_app.sh" >/dev/null
-sleep 3
 identity="$(printf 'id\nexit\n' | adb shell 'toybox nc -w 3 127.0.0.1 4321' | tr -d '\r')"
 case "$identity" in
-  *uid=1000*context=u:r:system_app:s0*) : ;;
-  *) die "uid-1000 staging listener failed: $identity" ;;
+  *uid=1000*context=u:r:system_app:s0*)
+    echo "reusing existing uid-1000 staging listener"
+    ;;
+  *)
+    adb shell < "$repo_dir/scripts/zygote_payload_system_app.sh" >/dev/null
+    sleep 3
+    identity="$(printf 'id\nexit\n' | adb shell 'toybox nc -w 3 127.0.0.1 4321' | tr -d '\r')"
+    case "$identity" in
+      *uid=1000*context=u:r:system_app:s0*) : ;;
+      *) die "uid-1000 staging listener failed: $identity" ;;
+    esac
+    ;;
 esac
 
 {

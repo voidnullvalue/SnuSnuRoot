@@ -101,7 +101,7 @@ install_artifact() {
     echo "installing $name"
     output="$({
         emit_file "$target" "$source"
-        printf 'test "$(toybox sha256sum %s.new | cut -d" " -f1)" = %s && mv -f %s.new %s\n' \
+        printf 'test "$(toybox sha256sum %s.new | cut -d" " -f1)" = %s && mv -f %s.new %s && sync\n' \
             "$target" "$expected" "$target" "$target"
         printf 'toybox sha256sum %s\nexit\n' "$target"
     } | timeout 180 "$adb_bin" shell \
