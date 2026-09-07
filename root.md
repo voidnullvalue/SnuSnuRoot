@@ -36,11 +36,10 @@ Constraints (hard-won, see `notes/uid1000-method.md`):
   value must never survive; verify `settings get ... = null` before and after.
 
 ### P2. amazon_app JNI carrier + hwbinder leak/write (in-memory kwrite)
-The one-shot injection spawns `WebViewZygoteInit` as **uid 10100
-(`u:r:amazon_app:s0`)** on abstract socket `codex_amazon_app_v51a`, with the
-agent (`/data/securedStorageLocation/codex.amazon.jni.v51/agent.jar` +
-`libcodex_jni.so`) preloaded via the 5-field WebView zygote preload command
-sent with `scripts/webview_zygote_preload_client.py`.
+The one-shot injection spawns a child as **uid 10100
+(`u:r:amazon_app:s0`)**. Its wrapper executes `/system/bin/app_process64` and
+runs the carrier agent from
+`/data/securedStorageLocation/codex.amazon.jni.v51/agent.jar`.
 
 The agent exposes a small socket protocol on `127.0.0.1:43271`:
 
@@ -55,6 +54,49 @@ The leak result byte `0x50` is a per-boot one-shot: once spent (`0x40...`,
 ENODATA/EALREADY), only a full kernel reboot clears it. A respawned carrier
 cannot rebind the abstract socket and uid-2000 shell cannot kill the uid-10100
 carrier, so a failed leak means "this boot is spent".
+
+#### Carrier ABI handling
+
+Device ABI support does not describe a process ABI. A 64-bit-capable Android
+device can run a 32-bit WebView provider, whose WebView zygote and children are
+therefore ELF32. Loading the former single ELF64 `libhwbinder_target.so` in
+that child produced `UnsatisfiedLinkError: ... is 64-bit instead of 32-bit`.
+
+Both `arm64-v8a` and `armeabi-v7a` JNI targets are now built and staged. The
+stateful primitive cannot safely run through Android's 32-bit Binder compat
+ABI: `binder_uintptr_t` is 32 bits there, but this stage returns and compares
+64-bit kernel pointers and writes a fixed 64-bit kernel address. The ELF32
+build therefore reports stage `0x4f`/`EOPNOTSUPP` before opening hwbinder or
+spending boot-scoped state.
+
+The carrier launcher avoids that path deterministically. The injected
+`amazon_app` child executes `/system/bin/app_process64` and starts the same
+agent main class directly. Before `HWBINDER_STATEFUL`, the agent reads its own
+`/proc/self/exe` ELF header, selects the ABI-suffixed JNI payload, and reports
+that exact path. The host verifies its ELF header and requires an ELF64/ELF64
+match. UID 10100, supplementary group 3003, and
+`u:r:amazon_app:s0` are still checked from the live agent response.
+
+ABI diagnostics include `device_supported_abis`, `carrier_pid`, the carrier
+UID/context, `carrier_abi`, `carrier_elf_class`, `selected_jni_library`, and
+`native_elf_class`. `UNKNOWN` means `/proc` or the payload was unreadable;
+`selected JNI payload does not match carrier` means staging is stale or the
+carrier changed ABI. These checks happen before the one-shot Binder command,
+so correcting the assets does not conceal a spent primitive.
+
+Healthy output on trona resembles:
+
+```text
+device_supported_abis=arm64-v8a,armeabi-v7a,armeabi
+carrier_pid=1234 ... context=u:r:amazon_app:s0 ... Groups:=3003
+carrier_abi=arm64-v8a carrier_elf_class=ELF64
+selected_jni_library=/data/securedStorageLocation/codex.amazon.jni.v51/libhwbinder_target.arm64-v8a.so selected_elf_class=ELF64
+native_library=/data/securedStorageLocation/codex.amazon.jni.v51/libhwbinder_target.arm64-v8a.so native_elf_class=ELF64
+```
+
+If either class is `UNKNOWN`, check access to `/proc/self/exe` or restage the
+assets. A class mismatch names both classes and exits before issuing
+`HWBINDER_STATEFUL`.
 
 ### P3. time_update property-trigger waiter (boot-time uid-0 handoff)
 `persist.sys.saved_time` is read by Amazon's `time_update` service at boot;

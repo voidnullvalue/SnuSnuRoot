@@ -1,13 +1,14 @@
 #!/bin/sh
 set -eu
 
-# Install the three WebView-zygote agent artifacts required by the initial
+# Install the carrier agent and both ABI variants required by the initial
 # root carrier. The operation is hash-gated and safe to repeat.
 
 repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 adb_bin="${ADB:-$repo_dir/tools/adb-portable.sh}"
 asset_dir="${SNUSNU_ASSET_DIR:-/data/securedStorageLocation/codex.amazon.jni.v51}"
 prebuilt_dir="$repo_dir/prebuilt/device/arm64-v8a"
+prebuilt32_dir="$repo_dir/prebuilt/device/armeabi-v7a"
 action="${1:-install}"
 
 adb() { timeout 30 "$adb_bin" "$@"; }
@@ -18,6 +19,9 @@ host_file() {
         agent.jar) echo "$prebuilt_dir/agent.jar" ;;
         libcodex_jni.so) echo "$prebuilt_dir/libcodex_jni.so" ;;
         libhwbinder_target.so) echo "$prebuilt_dir/libhwbinder_target.so" ;;
+        libhwbinder_target.arm64-v8a.so) echo "$prebuilt_dir/libhwbinder_target.so" ;;
+        libhwbinder_target.armeabi-v7a.so) echo "$prebuilt32_dir/libhwbinder_target.so" ;;
+        carrier_launcher.sh) echo "$repo_dir/scripts/carrier_launcher.sh" ;;
         *) die "unknown initial-root artifact: $1" ;;
     esac
 }
@@ -37,7 +41,9 @@ artifact_ready() {
 
 verify_assets() {
     failed=0
-    for name in agent.jar libcodex_jni.so libhwbinder_target.so; do
+    for name in agent.jar libcodex_jni.so libhwbinder_target.so \
+        libhwbinder_target.arm64-v8a.so \
+        libhwbinder_target.armeabi-v7a.so carrier_launcher.sh; do
         source="$(host_file "$name")"
         expected="$(sha256sum "$source" | awk '{print $1}')"
         actual="$(device_digest "$name")"
@@ -118,7 +124,9 @@ case "$action" in
         ensure_uid1000_channel
         printf 'mkdir -p %s; chmod 0755 %s\nexit\n' "$asset_dir" "$asset_dir" \
             | adb shell 'toybox nc -w 10 127.0.0.1 4321' >/dev/null
-        for name in agent.jar libcodex_jni.so libhwbinder_target.so; do
+        for name in agent.jar libcodex_jni.so libhwbinder_target.so \
+            libhwbinder_target.arm64-v8a.so \
+            libhwbinder_target.armeabi-v7a.so carrier_launcher.sh; do
             install_artifact "$name"
         done
         verify_assets || die "initial-root asset verification failed"

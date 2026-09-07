@@ -117,6 +117,8 @@ doctor() {
         [ -s "$repo_dir/prebuilt/device/arm64-v8a/$initial_asset" ] \
             || die "missing initial-root artifact: $initial_asset"
     done
+    [ -s "$repo_dir/prebuilt/device/armeabi-v7a/libhwbinder_target.so" ] \
+        || die "missing ELF32 hwbinder JNI artifact"
     if grep -R -E 'svc power reboot|PowerManager.*reboot' \
             "$repo_dir/poc/snusnu-persist-app/src" >/dev/null 2>&1; then
         die "unsafe automatic reboot path found in persistence actor"

