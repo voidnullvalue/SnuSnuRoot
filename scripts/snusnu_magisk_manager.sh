@@ -301,6 +301,9 @@ run_remaining_boot_stages() {
     dver=$(root_cmd_short '/sbin/magisk -v')
     [ -n "$dver" ] || die "magiskd stopped responding after boot stages"
     log "magiskd still responds: $dver"
+
+    log "fixing su policy for uid=2000 (shell)"
+    root_cmd_short '/sbin/magisk --sqlite "UPDATE policies SET policy=2 WHERE uid=2000;"'
 }
 
 package_uid() {
