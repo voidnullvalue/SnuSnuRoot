@@ -354,7 +354,12 @@ arm() {
     exempt="$(adb shell 'settings get global hidden_api_blacklist_exemptions' | tr -d '\r')"
     [ "$exempt" = null ] || die "exemptions cleanup failed: $exempt"
     armed="$(adb shell getprop persist.sys.saved_time | tr -d '\r')"
-    [ "$armed" = "$TRIGGER" ] || die "waiter property was not armed: $armed"
+    # If waiter was consumed in this boot (numeric value), skip re-arm verification
+    case "$armed" in
+        ""|*[!0-9]*) die "waiter property value invalid: $armed" ;;
+        "$TRIGGER") : ;; # normal case
+        *) echo "info: waiter property consumed in this boot ($armed); proceeding with boot actor" ;;
+    esac
     adb shell "settings put global '$PERSIST_STATUS_KEY' installed; settings delete global '$PERSIST_REARM_KEY'; settings put global '$PERSIST_RETRY_KEY' 0" >/dev/null
     commit_actor_enable
 
