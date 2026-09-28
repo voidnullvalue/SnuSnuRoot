@@ -1,106 +1,213 @@
 <!doctype html>
-<!-- pages deploy retrigger 2026-09-01 -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <meta name="description" content="rooting a fire hd 10 because apparently i have problems">
   <title>rooting a fire hd 10 because apparently i have problems</title>
+  <meta name="description" content="Rooting a current-firmware Fire HD 10 11th gen with a locked bootloader, an old Binder bug, a weird Amazon root service, and way too much persistence.">
+  <meta name="theme-color" content="#0a0c0b">
+  <meta property="og:title" content="rooting a fire hd 10 because apparently i have problems">
+  <meta property="og:description" content="A current-firmware Fire HD 10 11th gen, a locked bootloader, Binder corruption, time_update, permissive SELinux, and Magisk without modifying boot or system.">
+  <meta property="og:type" content="article">
+  <meta name="devvoid:post" content="1">
+  <meta name="devvoid:title" content="rooting a fire hd 10 because apparently i have problems">
+  <meta name="devvoid:summary" content="A current-firmware Fire HD 10 11th gen rooted with a Binder exploit chain, Amazon's time_update service, permissive SELinux, and live Magisk without modifying boot or system.">
+  <meta name="devvoid:published" content="2026-09-02T01:13:11Z">
+  <meta name="devvoid:tags" content="fire-hd-10, android, root, reverse-engineering, binder, magisk">
   <style>
     :root {
       color-scheme: dark;
-      --bg: #0d1117;
-      --panel: #161b22;
-      --text: #c9d1d9;
-      --muted: #8b949e;
-      --border: #30363d;
-      --link: #58a6ff;
-      --code: #e6edf3;
+      --bg: #0a0c0b;
+      --panel: #0f1210;
+      --text: #d9e0d8;
+      --muted: #7f8c80;
+      --dim: #566057;
+      --accent: #9be564;
+      --accent-2: #f0a35e;
+      --line: #232a24;
+      --code: #c7d6c7;
+      --max: 780px;
     }
 
     * { box-sizing: border-box; }
+
+    html {
+      background: var(--bg);
+      scroll-behavior: smooth;
+    }
 
     body {
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font: 17px/1.72 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 16px;
+      line-height: 1.72;
+      text-rendering: optimizeLegibility;
     }
 
-    main {
-      width: min(760px, calc(100% - 38px));
-      margin: 0 auto;
-      padding: 64px 0 96px;
+    a {
+      color: var(--accent);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
     }
+
+    a:hover { color: #c4ff9d; }
+
+    .wrap {
+      width: min(calc(100% - 32px), var(--max));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 44px 0 30px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .prompt {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .prompt .host { color: var(--accent); }
+    .prompt .path { color: var(--accent-2); }
 
     h1, h2 {
-      color: #f0f6fc;
-      line-height: 1.25;
-      letter-spacing: -0.03em;
+      line-height: 1.2;
+      letter-spacing: -0.025em;
     }
 
     h1 {
-      margin: 0 0 42px;
-      font-size: clamp(2rem, 6vw, 3.7rem);
-      font-weight: 800;
+      margin: 0;
+      max-width: 20ch;
+      font-size: clamp(2rem, 7vw, 3.6rem);
+      font-weight: 700;
+      color: #eef5ed;
+    }
+
+    .dek {
+      margin: 22px 0 0;
+      max-width: 65ch;
+      color: var(--muted);
+      font-size: 1.03rem;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      margin-top: 22px;
+      color: var(--dim);
+      font-size: 13px;
+    }
+
+    main {
+      padding: 32px 0 64px;
     }
 
     h2 {
-      margin: 60px 0 24px;
-      font-size: 1.5rem;
+      margin: 3.2rem 0 1rem;
+      font-size: 1.35rem;
+      color: #e7eee6;
     }
 
-    p { margin: 0 0 22px; }
+    h2::before {
+      content: "## ";
+      color: var(--accent);
+    }
+
+    p { margin: 1rem 0; }
+    strong { color: #f0f4ef; }
 
     .pile {
-      margin: 30px 0;
-      padding-left: 22px;
-      border-left: 2px solid var(--border);
-      color: #f0f6fc;
+      margin: 1.5rem 0;
+      padding: 0.2rem 0 0.2rem 1rem;
+      border-left: 2px solid var(--accent);
+      color: #edf3ec;
     }
 
-    .pile p { margin: 0 0 10px; }
-    .pile p:last-child { margin-bottom: 0; }
+    .pile p { margin: 0.4rem 0; }
 
     pre {
       overflow-x: auto;
-      margin: 28px 0;
-      padding: 18px 20px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      margin: 1.4rem 0;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
       background: var(--panel);
       color: var(--code);
-      font: 15px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      line-height: 1.45;
+      font-size: 14px;
+      tab-size: 2;
     }
 
     code {
-      color: #f0f6fc;
       font-family: inherit;
+      color: var(--code);
     }
 
-    a { color: var(--link); }
+    p code {
+      padding: 0.12rem 0.3rem;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background: var(--panel);
+      font-size: 0.94em;
+    }
+
+    .lede {
+      font-size: 1.08rem;
+      color: #e4eae3;
+    }
 
     footer {
-      margin-top: 72px;
-      padding-top: 22px;
-      border-top: 1px solid var(--border);
+      padding: 24px 0 48px;
+      border-top: 1px solid var(--line);
       color: var(--muted);
-      font-size: 14px;
+      font-size: 13px;
     }
 
-    @media (max-width: 600px) {
-      main { padding-top: 38px; }
-      body { font-size: 16px; }
+    .cursor {
+      display: inline-block;
+      width: 0.65ch;
+      height: 1.05em;
+      margin-left: 0.2ch;
+      vertical-align: -0.14em;
+      background: var(--accent);
+      animation: blink 1.15s steps(1, end) infinite;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cursor { animation: none; }
+      html { scroll-behavior: auto; }
+    }
+
+    @media (max-width: 560px) {
+      body { font-size: 15px; }
+      header { padding-top: 28px; }
+      pre { margin-left: -8px; margin-right: -8px; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <article>
-      <h1>rooting a fire hd 10 because apparently i have problems</h1>
+  <header>
+    <div class="wrap">
+      <p class="prompt"><span class="host">void@trona</span>:<span class="path">~/SnuSnuRoot</span>$ cat README.md</p>
+      <h1>rooting a fire hd 10 because apparently i have problems<span class="cursor" aria-hidden="true"></span></h1>
+      <p class="dek">current Fire OS. locked bootloader. no downgrade. no boot modification. i just wanted uid=0 on a free tablet and apparently that became a whole thing.</p>
+      <div class="meta">
+        <span>September 1, 2026</span>
+        <span>Fire HD 10 (11th gen / trona)</span>
+        <span>Android 9 / Linux 4.4 / MediaTek</span>
+      </div>
+    </div>
+  </header>
 
-      <p>this started because i wanted to root a fire hd 10 11th gen i got for free</p>
+  <main class="wrap">
+    <article>
+      <p class="lede">this started because i wanted to root a fire hd 10 11th gen i got for free</p>
 
       <p>current fire os. locked bootloader. no flashing old firmware. preferably without opening it.</p>
 
@@ -249,10 +356,12 @@ Magisk=running</code></pre>
 
       <p>death by snu snu.</p>
     </article>
-
-    <footer>
-      <a href="https://github.com/voidnullvalue/SnuSnuRoot">source / SnuSnuRoot</a>
-    </footer>
   </main>
+
+  <footer>
+    <div class="wrap">
+      <span>void@trona:~$ cd /dev/void &amp;&amp; </span><a href="https://voidnullvalue.github.io/Enter-dev-void/">Enter /dev/void/</a><span> :: </span><a href="https://github.com/voidnullvalue/SnuSnuRoot">source</a><span> </span><span class="cursor" aria-hidden="true"></span>
+    </div>
+  </footer>
 </body>
 </html>
