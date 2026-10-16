@@ -170,10 +170,19 @@ changes when the files are already current.
 
 ## 3. Scripts (entry points)
 
+The supported root architecture is now `runme.sh` (dispatch/composition) →
+`scripts/stages/` → sourceable libraries and existing native helpers. Stage
+modules never call back into `runme.sh`. Full contracts, consumption rules,
+machine-readable results, and manual workflows are documented in
+[`docs/stage-contracts.md`](docs/stage-contracts.md).
+
 | script | role |
 | --- | --- |
-| `runme.sh` | Top-level `arm`, `status`, `verify`, and `disarm`, plus host fallbacks. |
-| `scripts/root_poc.sh` | Full PoC driver — staging-if-needed → reboot → root chain, plus cleanup subcommand. |
+| `runme.sh` | Stable stage dispatcher plus `root` orchestration, status, doctor, and lifecycle compatibility aliases. |
+| `scripts/root_flow.sh` | Composes stages, performs only plausible fresh-boot retries, then bootstraps Magisk and persistence. |
+| `scripts/stages/*.sh` | Standalone asset, waiter, carrier, leak, write, handoff, Magisk, and persistence operations. |
+| `scripts/lib/*.sh` | Sourceable stage result, boot-aware state, and live carrier validation helpers. |
+| `scripts/root_poc.sh` | Compatibility wrapper for the stable `runme.sh` interface. |
 | `scripts/stage_initial_root_assets.sh` | Idempotently installs and verifies the agent/JNI/hwbinder files required by phase B. |
 | `scripts/stage_reroot_waiter.sh <payload>` | Phase A: consumes the boot's one-shot to install `w/b` and arm `persist.sys.saved_time`. Ends with "waiter armed; reboot". |
 | `scripts/reroot_after_boot.sh <payload>` | Phase B: runs P2 (leak → write → Permissive) and confirms P3 handoff + root service on 4325. |
@@ -199,19 +208,22 @@ cd SnuSnuRoot
 adb devices                 # expect one authorized device
 
 # One-shot, end-to-end (recommended):
-scripts/root_poc.sh
+./runme.sh root
 
-# Install persistence after the initial root, then prove re-arm twice:
-./runme.sh arm
+# The normal root flow already installs persistence; prove re-arm twice:
 adb reboot
 ./runme.sh verify
 adb reboot
 ./runme.sh verify
 
-# Manual phases:
-scripts/stage_reroot_waiter.sh /tmp/opencode/rootsvc_payload.sh   # once only
-adb reboot                                                        # (physical if wedged)
-scripts/reroot_after_boot.sh   /tmp/opencode/rootsvc_payload.sh   # per boot
+# Manual stages (users may intentionally stop after any line):
+./runme.sh stage-assets
+./runme.sh arm-waiter /tmp/opencode/rootsvc_payload.sh
+adb reboot
+./runme.sh carrier
+./runme.sh leak
+./runme.sh write
+./runme.sh root-service
 ```
 
 The persistence lifecycle uses checked-in APK, Magisk, ARM64 carrier, and ADB

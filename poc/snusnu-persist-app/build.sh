@@ -4,6 +4,7 @@ set -eu
 app_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 repo_dir="$(CDPATH= cd -- "$app_dir/../.." && pwd)"
 build_dir="$app_dir/build"
+output_apk="${SNUSNU_OUTPUT_APK:-$build_dir/snusnu-persistence.apk}"
 work_dir="$(mktemp -d "$build_dir.work.XXXXXX")"
 trap 'rm -rf "$work_dir"' EXIT HUP INT TERM
 
@@ -47,9 +48,11 @@ for required in "$android_jar" "$aapt2" "$d8" "$apksigner"; do
 done
 
 mkdir -p "$work_dir/classes" "$work_dir/dex" "$build_dir"
+mkdir -p "$(dirname -- "$output_apk")"
 javac -source 8 -target 8 -classpath "$android_jar" -d "$work_dir/classes" \
     "$app_dir/src/io/github/voidnullvalue/snusnuroot/persistence/BootstrapActivity.java" \
     "$app_dir/src/io/github/voidnullvalue/snusnuroot/persistence/BootReceiver.java" \
+    "$app_dir/src/io/github/voidnullvalue/snusnuroot/persistence/FirmwareGuard.java" \
     "$app_dir/src/io/github/voidnullvalue/snusnuroot/persistence/PersistenceService.java"
 jar cf "$work_dir/classes.jar" -C "$work_dir/classes" .
 "$d8" --min-api 28 --output "$work_dir/dex" "$work_dir/classes.jar"
@@ -69,7 +72,7 @@ fi
     --min-sdk-version 28 --v1-signing-enabled true \
     --v2-signing-enabled true --v3-signing-enabled false \
     --ks "$keystore" --ks-pass pass:android --key-pass pass:android \
-    --out "$build_dir/snusnu-persistence.apk" "$work_dir/unsigned.apk"
+    --out "$output_apk" "$work_dir/unsigned.apk"
 "$apksigner" verify --verbose \
-    "$build_dir/snusnu-persistence.apk"
-sha256sum "$build_dir/snusnu-persistence.apk"
+    "$output_apk"
+sha256sum "$output_apk"

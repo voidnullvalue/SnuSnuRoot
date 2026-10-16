@@ -19,6 +19,17 @@ set -eu
 
 repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 adb_bin="${ADB:-$repo_dir/tools/adb-portable.sh}"
+if [ "${SNUSNU_LEGACY_MONOLITH:-0}" != 1 ]; then
+  if [ -n "${1:-}" ]; then
+    [ -f "$1" ] || { echo "FATAL: payload file not found: $1" >&2; exit 20; }
+    "$adb_bin" push "$1" /data/local/tmp/__reroot_payload.sh >/dev/null
+    "$adb_bin" shell 'chmod 0755 /data/local/tmp/__reroot_payload.sh' >/dev/null
+  fi
+  "$repo_dir/scripts/stages/30-carrier.sh"
+  "$repo_dir/scripts/stages/40-hwbinder-leak.sh"
+  "$repo_dir/scripts/stages/50-hwbinder-write.sh"
+  exec "$repo_dir/scripts/stages/60-root-handoff.sh"
+fi
 asset_dir=/data/securedStorageLocation/codex.amazon.jni.v51
 probe_port=43271
 nice_name=codex-system-amazon-v52

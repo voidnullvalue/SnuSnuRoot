@@ -19,6 +19,11 @@ set -eu
 # XBPS build is used only when no host adb is available.
 
 repo_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+case "${1:-root}" in
+  root) shift 2>/dev/null || true; exec "$repo_dir/runme.sh" root "$@" ;;
+  status) shift 2>/dev/null || true; exec "$repo_dir/runme.sh" status "$@" ;;
+  disarm) shift 2>/dev/null || true; exec "$repo_dir/runme.sh" disarm "$@" ;;
+esac
 adb_bin="${ADB:-$repo_dir/tools/adb-portable.sh}"
 
 payload_default="$repo_dir/scripts/rootsvc_payload.sh"

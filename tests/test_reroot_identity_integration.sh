@@ -13,7 +13,7 @@ else
     result=$?
 fi
 [ "$result" -eq 30 ] || { cat "$output"; echo "FAIL: expected stateful-spent exit 30, got $result" >&2; exit 1; }
-grep -q '^== 3/7 stateful leak' "$output" \
+grep -q '^carrier_pid=1995' "$output" \
     || { cat "$output"; echo "FAIL: valid observed identity did not reach stateful leak" >&2; exit 1; }
 if grep -q 'carrier validation failed' "$output"; then
     cat "$output"

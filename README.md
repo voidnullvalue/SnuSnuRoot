@@ -10,18 +10,20 @@ install a working Magisk userspace + manager — all in one run, without touchin
 
 ## What it does
 
-Everything runs from the host over adb. Two stages, both reversible in one boot:
+Everything runs from the host over adb. The normal root path is one command,
+but every meaningful stage is also independently inspectable:
 
-1. **Root chain** (`runme.sh root`)
+1. **Complete root chain** (`runme.sh root`)
    - Arms the verified boot-time `time_update` parser (`persist.sys.saved_time`)
      with a waiter via the boot's single zygote injection.
    - Reboots; on the fresh boot the carrier is respawned through
      WebViewZygoteInit, the hwbinder stateful leak + NULL write drop SELinux to
      Permissive, then the pre-armed waiter launches the payload and restores
      the original numeric `saved_time`.
-   - End state: a uid-0 listener on `127.0.0.1:4325` (`u:r:time_update:s0`).
+   - Verifies the uid-0 listener, bootstraps Magisk, and installs the existing
+     persistence actor. End state: root, Magisk, and persistence are ready.
 
-2. **Magisk userspace** (`runme.sh bootstrap` then `runme.sh manager`)
+2. **Magisk userspace** (`runme.sh bootstrap-magisk` then `runme.sh manager`)
    - `bootstrap` mounts a Magisk tmpfs on `/sbin` (original entries preserved
      via bind mounts), applies a live SELinux policy, starts `magiskd`, and
      binds the Manager's `trusted_cert` from the staged stub APK *before* any su
@@ -30,7 +32,7 @@ Everything runs from the host over adb. Two stages, both reversible in one boot:
      installs the Manager APK, runs `--service` / `--boot-complete`, and
      launches the app.
 
-3. **Reboot persistence** (`runme.sh arm`)
+3. **Reboot persistence** (`runme.sh install-persistence`, alias `arm`)
    - Installs a direct-boot actor that regains the UID-1000 system-app channel,
      runs the hwbinder primitive from a resident carrier, and restores UID 0,
      Permissive SELinux, and Magisk after every normal reboot.
@@ -44,7 +46,10 @@ runme.sh                  single entry point
 prebuilt/                 signed boot actor, Magisk runtime, resident carrier
 poc/snusnu-persist-app/   direct-boot actor source and maintainer build script
 scripts/
-  root_poc.sh             full root driver (root|status|disarm)
+  root_flow.sh            high-level stage composition and bounded retry
+  lib/                    sourceable ADB, state, and carrier checks
+  stages/                 independently runnable stage contracts
+  root_poc.sh             compatibility wrapper
   stage_reroot_waiter.sh  arm the boot waiter (pre-reboot)
   reroot_after_boot.sh    per-boot reroot chain
   rootsvc_payload.sh      uid-0 listener payload
@@ -67,15 +72,14 @@ tools/xbps-root/usr/           minimal adb + transitive shared-library closure
 git clone https://github.com/voidnullvalue/SnuSnuRoot.git
 cd SnuSnuRoot
 ./runme.sh status      # confirm adb device + current state
-./runme.sh root        # stage waiter, reboot, reroot (uid-0 on 127.0.0.1:4325)
-./runme.sh bootstrap   # live Magisk runtime on /sbin
+./runme.sh root        # complete root + Magisk + persistence flow
+./runme.sh bootstrap-magisk # explicit standalone live Magisk runtime
 ./runme.sh manager     # install + launch Magisk Manager
 ./runme.sh request     # trigger an adb-shell su request; tap Allow on the tablet
 ./runme.sh status      # verify: Manager installed, daemon version, policies
 
-# Install and verify automatic reboot persistence after root is active:
+# Verify automatic reboot persistence after root is active:
 ./runme.sh doctor
-./runme.sh arm
 adb reboot
 ./runme.sh verify
 ```
@@ -83,6 +87,37 @@ adb reboot
 Once the Manager is up it reports Magisk installed/up-to-date (the Home card's
 "Reinstall" button is the *installed* state indicator) and MagiskSU GUI
 authorization works per-app.
+
+## Modular stage interface
+
+```sh
+./runme.sh stage-assets
+./runme.sh arm-waiter
+./runme.sh carrier
+./runme.sh leak
+./runme.sh write
+./runme.sh root-service
+./runme.sh bootstrap-magisk
+./runme.sh install-persistence
+./runme.sh manager
+
+./runme.sh status [--verbose]
+./runme.sh doctor
+./runme.sh disarm
+```
+
+Standalone stages verify prerequisites and refuse unsafe progression; they do
+not reboot or run unrelated prerequisite stages. `leak` and `write` are tied
+to `/proc/sys/kernel/random/boot_id`, so an old leak can never authorize a
+write. See [the stage contracts](docs/stage-contracts.md) for the dependency
+graph, retry rules, state format, and researcher workflows.
+
+`./runme.sh firmware` reports the exact device/build match without changing the
+tablet. Root, kernel-write, and persistence-install paths fail closed unless
+`firmware/manifest.psv` selects the shipped payload by exact incremental build.
+The persistence actor pins that identity when installed and disables itself
+before opening its privileged channel if a later boot reports different
+firmware (for example, after an OTA).
 
 ## Notes & safety
 

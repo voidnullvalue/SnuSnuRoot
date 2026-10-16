@@ -1,12 +1,17 @@
 #!/bin/sh
 set -eu
 
+if [ "${1:-}" = devices ]; then
+    printf 'List of devices attached\nmock-device\tdevice\n'
+    exit 0
+fi
 if [ "${1:-}" != shell ]; then
     exit 0
 fi
 shift
 command="$*"
 case "$command" in
+    *'/proc/sys/kernel/random/boot_id'*) echo boot-a ;;
     *'getprop sys.boot_completed'*) echo 1 ;;
     *'settings get global hidden_api_blacklist_exemptions'*) echo null ;;
     *'getprop persist.sys.saved_time'*)
