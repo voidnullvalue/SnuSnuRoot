@@ -27,6 +27,7 @@ snusnu_firmware_resolve() {
     [ -r "$manifest" ] || return 1
     SNUSNU_FW_TIER=unsupported
     SNUSNU_FW_ASSETS=none
+    SNUSNU_FW_MATCH_INCREMENTAL=
     count=0
     while IFS='|' read -r record_device record_build record_incremental record_tier record_assets record_notes; do
         case "$record_device" in ""|\#*) continue ;; esac
@@ -39,18 +40,15 @@ snusnu_firmware_resolve() {
         count=$((count + 1))
         SNUSNU_FW_TIER="$record_tier"
         SNUSNU_FW_ASSETS="$record_assets"
+        SNUSNU_FW_MATCH_INCREMENTAL="$record_incremental"
     done < "$manifest"
     # Duplicate matches are ambiguous, including overlapping wildcard rows.
     [ "$count" -le 1 ] || return 1
     # A wildcard entry may NEVER authorize an executable payload.
-    case "$SNUSNU_FW_ASSETS:$SNUSNU_FW_TIER:$count" in
-        prebuilt:verified:1)
-            # Verify the selected entry is a specific incremental.
-            # The shipped firmware is the only entry allowed to do kernel writes.
-            [ "$record_incremental" != '*' ] || return 1
-            ;;
-        none:*|prebuilt:*|*:*) ;;
-    esac
+    if [ "$SNUSNU_FW_ASSETS:$SNUSNU_FW_TIER" = prebuilt:verified ]; then
+        # Never authorize writes from a wildcard or otherwise unbound row.
+        [ "$SNUSNU_FW_MATCH_INCREMENTAL" != '*' ] && [ "$count" -eq 1 ] || return 1
+    fi
     return 0
 }
 
