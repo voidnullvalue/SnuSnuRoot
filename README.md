@@ -61,6 +61,28 @@ magisk/
 tools/xbps-root/usr/           minimal adb + transitive shared-library closure
 ```
 
+## Firmware information (read-only)
+
+`./runme.sh firmware` reads the device's ADB-reported device/build ID,
+incremental build number, and build fingerprint. It compares them to
+`firmware/manifest.psv` and reports whether this repository contains
+build-specific verification evidence and a matching existing asset set.
+
+This command does **not** stage files, run an exploit, or change the tablet.
+It exits nonzero for unknown, evidence-only, or inconsistent firmware records.
+The underlying offline checker can be tested without hardware:
+
+```sh
+sh -n scripts/firmware_compat.sh tests/test_firmware_compat.sh
+sh tests/test_firmware_compat.sh
+```
+
+**Development branch limitation:** this is a diagnostic only. The existing
+root/install paths and the autonomous boot actor do **not** consume this
+manifest, so this checker does not prevent an incompatible kernel write by
+those paths. PR #2's PS7329.3842N evidence does not provide a shipped
+PS7329-compatible binary or verify autonomous persistence.
+
 ## Quick start
 
 ```sh
