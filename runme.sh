@@ -514,6 +514,13 @@ case "${1:-status}" in
     status)
         status
         ;;
+    firmware)
+        # Read-only diagnostic: reports firmware identity and known evidence.
+        # Does not stage, arm, or execute any root payload.
+        require_device
+        . "$repo_dir/scripts/firmware_compat.sh"
+        snusnu_firmware_report "$repo_dir/firmware/manifest.psv"
+        ;;
     verify)
         verify
         ;;
@@ -537,6 +544,6 @@ case "${1:-status}" in
         doctor
         ;;
     *)
-        die "usage: $0 {arm|status|verify|disarm|root|bootstrap|manager|request|doctor}"
+        die "usage: $0 {arm|status|firmware|verify|disarm|root|bootstrap|manager|request|doctor}"
         ;;
 esac
