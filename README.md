@@ -158,3 +158,14 @@ code are likewise distributed under GPL-3.0.
   other host architectures must provide `ADB=/path/to/adb`.
 - The initial host-driven root fallback additionally uses `python3`.
 - Fire HD 10 with USB debugging enabled and an authorized adb host.
+
+
+## PS7329.3842N (Fire OS 7.3.2.9) verification
+
+A full-chain verification of this toolchain on the older PS7329.3842N build —
+including the corrected `selinux_enforcing` address (`0xffffff800996d668`) and
+the per-build address-recovery pipeline — is documented in
+[docs/PS7329-3842N-verification.md](docs/PS7329-3842N-verification.md) and
+[docs/ADDRESS-TABLE.md](docs/ADDRESS-TABLE.md). The shipped `prebuilt/` binaries
+target PS7331.4460N only; PS7329 users must rebuild the JNI carrier per the
+verification doc.
