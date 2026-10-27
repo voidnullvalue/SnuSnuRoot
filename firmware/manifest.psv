@@ -1,0 +1,6 @@
+# device|build_id|incremental|verification|asset_set|notes
+# Only verified:prebuilt may run the shipped kernel-write carrier.
+# Use exact observed identifiers. "*" incremental is permitted ONLY for evidence-only records.
+trona|PS7331.4460N|0031575862404|verified|prebuilt|Original device/build documented in root.md; only shipped payload target
+trona|PS7329.3842N|*|initial-root-reported|none|PR #2 reports successful root; no compatible binary shipped and persistence unverified
+trona|PS7326.3178N|*|address-derived|none|Address independently reported; complete root chain not validated here
