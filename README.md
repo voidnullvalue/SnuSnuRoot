@@ -8,6 +8,21 @@ Self-contained toolkit to root a Fire HD 10 (trona / PS7331.4460N) over adb and
 install a working Magisk userspace + manager — all in one run, without touching
 /boot or the underlying /system filesystem.
 
+## Reported firmware compatibility
+
+SnuSnuRoot was originally developed for the **Fire HD 10 (2021, KFTRWI / trona)** on **PS7331.4460N**. Other builds have been reported working, but a successful root does **not** establish that the bundled payload supports the build unchanged or that unattended persistence is reliable.
+
+| Fire OS build | Reported result | Evidence and limitations |
+| --- | --- | --- |
+| **PS7331.4460N** (Fire OS 7.3.3.1) | Original documented root target | See [root.md](root.md). |
+| **PS7331.4463N** (Fire OS 7.3.3.1) | Independent UID 0 and MagiskSU success; warm-reboot persistence demonstrated with local fixes | [Detailed independent test report](https://github.com/voidnullvalue/SnuSnuRoot/pull/1#issuecomment-5983315838) (first native attempt missed; cold starts **not tested** in that report). [PR #1](https://github.com/voidnullvalue/SnuSnuRoot/pull/1) also reports persistence across power cycles. [Issue #4](https://github.com/voidnullvalue/SnuSnuRoot/issues/4) reports an older revision working but intermittent missing Magisk `su`, and a newer firmware safety gate rejecting this build. [Issue #5](https://github.com/voidnullvalue/SnuSnuRoot/issues/5) contains an additional HD 10 Plus write-up and files. |
+| **PS7331.4463N** (Fire OS 7.3.3.1), contributed fork | Unattended persistence independently reported with changes beyond upstream SnuSnuRoot | [Contributor's report](https://github.com/voidnullvalue/SnuSnuRoot/issues/6) documents three warm and two power-off boots (5/5) using a separate, modified [persistence implementation](https://github.com/acari-git/firehd10-persistent-root). **Not evidence that the stock upstream actor passes those tests.** |
+| **PS7329.3842N** (Fire OS 7.3.2.9) | Full root chain demonstrated on trona with a **firmware-specific rebuilt native carrier** | [PR #2 and verification evidence](https://github.com/voidnullvalue/SnuSnuRoot/pull/2). The shipped PS7331 carrier uses a different SELinux address and is **not** validated for this build; no general unattended persistence claim is made. |
+
+A [firmware address table in PR #2](https://github.com/voidnullvalue/SnuSnuRoot/pull/2) also mentions **PS7326.3178N**, but that is **not** a demonstrated end-to-end SnuSnuRoot success and is not listed as a working build.
+
+**Before attempting a root:** check your exact device build and the repository's current firmware-compatibility checks. A historical report using a specific commit, local patch, or rebuilt payload is **not** an endorsement of running current HEAD or the shipped binaries on that build. Kernel-write targets are firmware-specific; guessing them can damage the device, and there is no established reliable Trona unbrick procedure.
+
 ## What it does
 
 Everything runs from the host over adb. Two stages, both reversible in one boot:
