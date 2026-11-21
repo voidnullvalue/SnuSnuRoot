@@ -1,0 +1,119 @@
+Source: objdump disassembly of the Linux kernel (GPL-2.0) as distributed
+in Amazon's official PS7329.3842N OTA (trona/KFTRWI). Provided for
+interoperability and security research. This excerpt is licensed
+GPL-2.0-or-later (compatible with this repo's GPL-3.0); Linux kernel
+source: kernel.org.
+
+
+/tmp/vmlinux_7329.elf:     file format elf64-littleaarch64
+
+
+Disassembly of section .kernel:
+
+ffffff80091b9e78 <enforcing_setup>:
+ffffff80091b9e78:	d10083ff 	sub	sp, sp, #0x20
+ffffff80091b9e7c:	d0002bc8 	adrp	x8, ffffff8009733000 <_einittext+0x52c4d0>
+ffffff80091b9e80:	f9452508 	ldr	x8, [x8, #2632]
+ffffff80091b9e84:	910003e2 	mov	x2, sp
+ffffff80091b9e88:	2a1f03e1 	mov	w1, wzr
+ffffff80091b9e8c:	a9017bfd 	stp	x29, x30, [sp, #16]
+ffffff80091b9e90:	910043fd 	add	x29, sp, #0x10
+ffffff80091b9e94:	f90007e8 	str	x8, [sp, #8]
+ffffff80091b9e98:	97c81967 	bl	ffffff80083c0434 <kstrtoull>
+ffffff80091b9e9c:	350000c0 	cbnz	w0, ffffff80091b9eb4 <enforcing_setup+0x3c>
+ffffff80091b9ea0:	f94003e8 	ldr	x8, [sp]
+ffffff80091b9ea4:	90003da9 	adrp	x9, ffffff800996d000 <_einittext+0x7664d0>
+ffffff80091b9ea8:	f100011f 	cmp	x8, #0x0
+ffffff80091b9eac:	1a9f07e8 	cset	w8, ne	// ne = any
+ffffff80091b9eb0:	b9066928 	str	w8, [x9, #1640]
+ffffff80091b9eb4:	d0002bc9 	adrp	x9, ffffff8009733000 <_einittext+0x52c4d0>
+ffffff80091b9eb8:	f94007e8 	ldr	x8, [sp, #8]
+ffffff80091b9ebc:	f9452529 	ldr	x9, [x9, #2632]
+ffffff80091b9ec0:	eb08013f 	cmp	x9, x8
+ffffff80091b9ec4:	540000a1 	b.ne	ffffff80091b9ed8 <enforcing_setup+0x60>  // b.any
+ffffff80091b9ec8:	a9417bfd 	ldp	x29, x30, [sp, #16]
+ffffff80091b9ecc:	320003e0 	orr	w0, wzr, #0x1
+ffffff80091b9ed0:	910083ff 	add	sp, sp, #0x20
+ffffff80091b9ed4:	d65f03c0 	ret
+ffffff80091b9ed8:	97bba725 	bl	ffffff80080a3b6c <__stack_chk_fail>
+
+ffffff80091b9edc <selinux_enabled_setup>:
+ffffff80091b9edc:	d10083ff 	sub	sp, sp, #0x20
+ffffff80091b9ee0:	d0002bc8 	adrp	x8, ffffff8009733000 <_einittext+0x52c4d0>
+ffffff80091b9ee4:	f9452508 	ldr	x8, [x8, #2632]
+ffffff80091b9ee8:	910003e2 	mov	x2, sp
+ffffff80091b9eec:	2a1f03e1 	mov	w1, wzr
+ffffff80091b9ef0:	a9017bfd 	stp	x29, x30, [sp, #16]
+ffffff80091b9ef4:	910043fd 	add	x29, sp, #0x10
+ffffff80091b9ef8:	f90007e8 	str	x8, [sp, #8]
+ffffff80091b9efc:	97c8194e 	bl	ffffff80083c0434 <kstrtoull>
+ffffff80091b9f00:	350000c0 	cbnz	w0, ffffff80091b9f18 <selinux_enabled_setup+0x3c>
+ffffff80091b9f04:	f94003e8 	ldr	x8, [sp]
+ffffff80091b9f08:	f0002e09 	adrp	x9, ffffff800977c000 <_einittext+0x5754d0>
+ffffff80091b9f0c:	f100011f 	cmp	x8, #0x0
+ffffff80091b9f10:	1a9f07e8 	cset	w8, ne	// ne = any
+ffffff80091b9f14:	b90a6128 	str	w8, [x9, #2656]
+ffffff80091b9f18:	d0002bc9 	adrp	x9, ffffff8009733000 <_einittext+0x52c4d0>
+ffffff80091b9f1c:	f94007e8 	ldr	x8, [sp, #8]
+ffffff80091b9f20:	f9452529 	ldr	x9, [x9, #2632]
+ffffff80091b9f24:	eb08013f 	cmp	x9, x8
+ffffff80091b9f28:	540000a1 	b.ne	ffffff80091b9f3c <selinux_enabled_setup+0x60>  // b.any
+ffffff80091b9f2c:	a9417bfd 	ldp	x29, x30, [sp, #16]
+ffffff80091b9f30:	320003e0 	orr	w0, wzr, #0x1
+ffffff80091b9f34:	910083ff 	add	sp, sp, #0x20
+ffffff80091b9f38:	d65f03c0 	ret
+ffffff80091b9f3c:	97bba70c 	bl	ffffff80080a3b6c <__stack_chk_fail>
+
+ffffff80091b9f40 <selinux_init>:
+ffffff80091b9f40:	a9be4ff4 	stp	x20, x19, [sp, #-32]!
+ffffff80091b9f44:	90ffed80 	adrp	x0, ffffff8008f69000 <_etext+0x284000>
+ffffff80091b9f48:	913cac00 	add	x0, x0, #0xf2b
+ffffff80091b9f4c:	a9017bfd 	stp	x29, x30, [sp, #16]
+ffffff80091b9f50:	910043fd 	add	x29, sp, #0x10
+ffffff80091b9f54:	97ffff6c 	bl	ffffff80091b9d04 <security_module_enable>
+ffffff80091b9f58:	f0002e08 	adrp	x8, ffffff800977c000 <_einittext+0x5754d0>
+ffffff80091b9f5c:	340007c0 	cbz	w0, ffffff80091ba054 <selinux_init+0x114>
+ffffff80091b9f60:	b94a6108 	ldr	w8, [x8, #2656]
+ffffff80091b9f64:	340007c8 	cbz	w8, ffffff80091ba05c <selinux_init+0x11c>
+ffffff80091b9f68:	b0ffed80 	adrp	x0, ffffff8008f6a000 <_etext+0x285000>
+ffffff80091b9f6c:	9103b400 	add	x0, x0, #0xed
+ffffff80091b9f70:	97bd84e0 	bl	ffffff800811b2f0 <printk>
+ffffff80091b9f74:	d5384113 	mrs	x19, sp_el0
+ffffff80091b9f78:	f943a674 	ldr	x20, [x19, #1864]
+ffffff80091b9f7c:	52901801 	mov	w1, #0x80c0                	// #32960
+ffffff80091b9f80:	321d07e0 	orr	w0, wzr, #0x18
+ffffff80091b9f84:	72a04801 	movk	w1, #0x240, lsl #16
+ffffff80091b9f88:	97c0f5c2 	bl	ffffff80081f7690 <__kmalloc>
+ffffff80091b9f8c:	b40007c0 	cbz	x0, ffffff80091ba084 <selinux_init+0x144>
+ffffff80091b9f90:	b20003e8 	mov	x8, #0x100000001           	// #4294967297
+ffffff80091b9f94:	f9000008 	str	x8, [x0]
+ffffff80091b9f98:	f9003e80 	str	x0, [x20, #120]
+ffffff80091b9f9c:	b9453268 	ldr	w8, [x19, #1328]
+ffffff80091b9fa0:	320003e9 	orr	w9, wzr, #0x1
+ffffff80091b9fa4:	b0ffed80 	adrp	x0, ffffff8008f6a000 <_etext+0x285000>
+ffffff80091b9fa8:	91042000 	add	x0, x0, #0x108
+ffffff80091b9fac:	0a685928 	bic	w8, w9, w8, lsr #22
+ffffff80091b9fb0:	90003da9 	adrp	x9, ffffff800996d000 <_einittext+0x7664d0>
+ffffff80091b9fb4:	52800a01 	mov	w1, #0x50                  	// #80
+ffffff80091b9fb8:	320e03e3 	orr	w3, wzr, #0x40000
+ffffff80091b9fbc:	aa1f03e2 	mov	x2, xzr
+ffffff80091b9fc0:	aa1f03e4 	mov	x4, xzr
+ffffff80091b9fc4:	b9066d28 	str	w8, [x9, #1644]
+ffffff80091b9fc8:	97c069de 	bl	ffffff80081d4740 <kmem_cache_create>
+ffffff80091b9fcc:	90003da8 	adrp	x8, ffffff800996d000 <_einittext+0x7664d0>
+ffffff80091b9fd0:	f9033900 	str	x0, [x8, #1648]
+ffffff80091b9fd4:	b0ffed80 	adrp	x0, ffffff8008f6a000 <_etext+0x285000>
+ffffff80091b9fd8:	91047c00 	add	x0, x0, #0x11f
+ffffff80091b9fdc:	321c03e1 	orr	w1, wzr, #0x10
+ffffff80091b9fe0:	320e03e3 	orr	w3, wzr, #0x40000
+ffffff80091b9fe4:	aa1f03e2 	mov	x2, xzr
+ffffff80091b9fe8:	aa1f03e4 	mov	x4, xzr
+ffffff80091b9fec:	97c069d5 	bl	ffffff80081d4740 <kmem_cache_create>
+ffffff80091b9ff0:	90003da8 	adrp	x8, ffffff800996d000 <_einittext+0x7664d0>
+ffffff80091b9ff4:	f9033d00 	str	x0, [x8, #1656]
+ffffff80091b9ff8:	97ffff4c 	bl	ffffff80091b9d28 <avc_init>
+ffffff80091b9ffc:	f0002e08 	adrp	x8, ffffff800977c000 <_einittext+0x5754d0>
+ffffff80091ba000:	9129a108 	add	x8, x8, #0xa68
+ffffff80091ba004:	528014c9 	mov	w9, #0xa6                  	// #166
+ffffff80091ba008:	f940090a 	ldr	x10, [x8, #16]
+ffffff80091ba00c:	f1000529 	subs	x9, x9, #0x1
